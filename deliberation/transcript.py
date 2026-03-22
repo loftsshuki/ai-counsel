@@ -238,6 +238,35 @@ class TranscriptManager:
                 ]
             )
 
+        # Add structured findings if available
+        if hasattr(result, "structured_findings") and result.structured_findings:
+            sf = result.structured_findings
+            lines.extend(
+                [
+                    "## Structured Findings",
+                    "",
+                    f"**Verdict:** {sf.verdict} | **Risk Level:** {sf.risk_level}",
+                    "",
+                ]
+            )
+            if sf.findings_by_severity:
+                severity_str = ", ".join(
+                    f"{count} {sev}" for sev, count in sf.findings_by_severity.items()
+                )
+                lines.append(f"**Summary:** {severity_str}")
+                lines.append("")
+
+            if sf.findings:
+                lines.append("| # | Severity | Category | Description | File | Suggested Fix |")
+                lines.append("|---|----------|----------|-------------|------|---------------|")
+                for i, f in enumerate(sf.findings, 1):
+                    file_ref = f.file or "-"
+                    fix = f.suggested_fix or "-"
+                    lines.append(
+                        f"| {i} | {f.severity} | {f.category} | {f.description} | {file_ref} | {fix} |"
+                    )
+                lines.append("")
+
         # Add voting results if available
         voting_lines = self._format_voting_section(result)
         if voting_lines:

@@ -207,6 +207,52 @@ class ConvergenceInfo(BaseModel):
     )
 
 
+class Finding(BaseModel):
+    """A structured finding from a code review or deliberation."""
+
+    severity: Literal["critical", "high", "medium", "low", "info"] = Field(
+        ..., description="Severity level of the finding"
+    )
+    category: Literal[
+        "security", "performance", "correctness", "architecture",
+        "maintainability", "error-handling", "testing", "other"
+    ] = Field(..., description="Category of the finding")
+    description: str = Field(
+        ..., description="Plain-English description of the issue"
+    )
+    file: Optional[str] = Field(
+        default=None, description="File path where the issue was found"
+    )
+    line: Optional[int] = Field(
+        default=None, description="Line number (if applicable)"
+    )
+    suggested_fix: Optional[str] = Field(
+        default=None, description="Suggested fix or remediation"
+    )
+    flagged_by: list[str] = Field(
+        default_factory=list,
+        description="Which participants flagged this finding",
+    )
+
+
+class StructuredFindings(BaseModel):
+    """Aggregated structured findings from a deliberation."""
+
+    verdict: Literal[
+        "APPROVE", "APPROVE_WITH_NOTES", "REQUEST_CHANGES", "NEEDS_DISCUSSION"
+    ] = Field(..., description="Overall verdict from the review")
+    risk_level: Literal["low", "medium", "high", "critical"] = Field(
+        ..., description="Overall risk level"
+    )
+    findings: list[Finding] = Field(
+        default_factory=list, description="List of specific findings"
+    )
+    findings_by_severity: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Count of findings per severity level",
+    )
+
+
 class DeliberationResult(BaseModel):
     """Model for complete deliberation result."""
 
@@ -232,4 +278,12 @@ class DeliberationResult(BaseModel):
     tool_executions: Optional[list] = Field(
         default_factory=list,
         description="List of tool executions during deliberation (evidence-based deliberation)",
+    )
+    structured_findings: Optional[StructuredFindings] = Field(
+        default=None,
+        description=(
+            "Structured, machine-readable findings extracted from the deliberation. "
+            "Includes verdict, risk level, and categorized findings with severity. "
+            "Available when models produce review-style output."
+        ),
     )

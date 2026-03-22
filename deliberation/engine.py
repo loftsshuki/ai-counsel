@@ -1259,6 +1259,29 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                 final_recommendation="Please review the full debate below.",
             )
 
+        # Extract structured findings (uses same fallback chain as summarizer)
+        structured_findings = None
+        if self.summarizer_chain:
+            from deliberation.findings import FindingsExtractor
+
+            for adapter, model_name, display_name in self.summarizer_chain:
+                try:
+                    logger.info(f"Attempting findings extraction with {display_name}...")
+                    extractor = FindingsExtractor(adapter, model_name)
+                    structured_findings = await extractor.extract_findings(
+                        question=request.question, responses=all_responses
+                    )
+                    if structured_findings:
+                        logger.info(
+                            f"Findings extraction completed: {structured_findings.verdict}, "
+                            f"{len(structured_findings.findings)} findings"
+                        )
+                        break
+                except Exception as e:
+                    error_msg = str(e).split('\n')[0][:100]
+                    logger.warning(f"Findings extraction failed with {display_name}: {error_msg}")
+                    continue
+
         # Aggregate voting results if any votes were cast
         voting_result = self._aggregate_votes(all_responses)
         if voting_result:
@@ -1322,6 +1345,7 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
             voting_result=voting_result,  # Add voting results
             graph_context_summary=graph_context_summary,  # Add graph context summary
             tool_executions=self.tool_execution_history,  # Add tool execution history
+            structured_findings=structured_findings,  # Add structured findings
         )
 
         # Add convergence info if available
