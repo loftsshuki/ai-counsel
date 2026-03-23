@@ -3,252 +3,470 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Counsel — Live Deliberation</title>
+<title>AI Counsel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a25;
-    --border: #2a2a3a;
-    --text: #e0e0e8;
-    --text-dim: #8888a0;
-    --accent: #4ade80;
-    --accent-dim: #22c55e33;
-    --warning: #fbbf24;
-    --danger: #ef4444;
-    --info: #60a5fa;
+    /* Deep green + cream war room palette */
+    --green-950: oklch(14% 0.04 155);
+    --green-900: oklch(18% 0.05 155);
+    --green-800: oklch(24% 0.06 155);
+    --green-700: oklch(32% 0.08 155);
+    --green-600: oklch(42% 0.10 155);
+    --green-500: oklch(52% 0.12 155);
+    --green-400: oklch(65% 0.14 155);
+    --green-300: oklch(78% 0.10 155);
+
+    --cream-50: oklch(97% 0.01 85);
+    --cream-100: oklch(95% 0.015 85);
+    --cream-200: oklch(90% 0.02 85);
+    --cream-300: oklch(82% 0.025 80);
+    --cream-500: oklch(70% 0.03 80);
+    --cream-700: oklch(55% 0.02 80);
+
+    --amber-500: oklch(72% 0.15 75);
+    --amber-400: oklch(78% 0.13 75);
+    --red-500: oklch(55% 0.20 25);
+    --red-400: oklch(65% 0.18 25);
+    --blue-500: oklch(60% 0.12 250);
+
+    --bg: var(--green-950);
+    --surface: var(--green-900);
+    --surface-raised: var(--green-800);
+    --border: var(--green-700);
+    --border-subtle: oklch(22% 0.04 155);
+    --text: var(--cream-100);
+    --text-secondary: var(--cream-500);
+    --text-muted: var(--cream-700);
+    --accent: var(--green-400);
+    --accent-dim: oklch(65% 0.14 155 / 0.15);
+
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Outfit', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font-body);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
+
+  /* ===== HEADER ===== */
   .header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 2.5rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
   }
-  .header h1 { font-size: 1.3rem; font-weight: 600; }
-  .header .badge {
-    background: var(--accent-dim);
-    color: var(--accent);
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
+  .header-left { display: flex; align-items: center; gap: 1.5rem; }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
     font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cream-100);
   }
-  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-
-  /* Input Section */
-  .input-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-  .input-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
-  .input-row:last-child { margin-bottom: 0; }
-  label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.3rem; }
-  textarea, select, input[type=number] {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 0.7rem;
-    font-size: 0.9rem;
-    font-family: inherit;
-    resize: vertical;
-  }
-  textarea:focus, select:focus { outline: none; border-color: var(--accent); }
-  select { cursor: pointer; }
-  .btn {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    padding: 0.7rem 1.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
-  .btn:hover { opacity: 0.9; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* Status Bar */
-  .status-bar {
+  .status-chip {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.8rem 1.5rem;
-    background: var(--surface);
+    gap: 0.4rem;
+    padding: 0.25rem 0.7rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    font-size: 0.85rem;
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
   }
+  .status-chip.live { border-color: var(--accent); color: var(--accent); }
   .status-dot {
-    width: 8px; height: 8px;
+    width: 6px; height: 6px;
     border-radius: 50%;
-    background: var(--text-dim);
+    background: var(--text-muted);
   }
-  .status-dot.active { background: var(--accent); animation: pulse 1.5s infinite; }
+  .status-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px oklch(65% 0.14 155 / 0.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .header-meta {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
 
-  /* Convergence Meter */
-  .convergence-meter {
-    flex: 1;
-    height: 6px;
-    background: var(--surface2);
+  /* ===== LAYOUT ===== */
+  .main { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 56px); }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    border-right: 1px solid var(--border-subtle);
+    padding: 2rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 56px);
+  }
+  .sidebar-section { }
+  .sidebar-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+  }
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
     border-radius: 3px;
+    color: var(--text);
+    padding: 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 200ms var(--ease-out-quart);
+  }
+  textarea:focus { outline: none; border-color: var(--green-600); }
+  select, input[type=number] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 0.55rem 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 200ms var(--ease-out-quart);
+    appearance: none;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--green-600); }
+  .input-row { display: flex; gap: 0.75rem; }
+  .input-row > * { flex: 1; }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--green-600);
+    color: var(--cream-50);
+    border: none;
+    border-radius: 3px;
+    padding: 0.7rem 1.5rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: background 150ms, opacity 150ms;
+  }
+  .btn-primary:hover { background: var(--green-500); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ===== CONVERGENCE ===== */
+  .convergence-panel {
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 3px;
+  }
+  .convergence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+  .convergence-header .label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .convergence-header .value {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .convergence-track {
+    height: 3px;
+    background: var(--border-subtle);
+    border-radius: 1px;
     overflow: hidden;
   }
   .convergence-fill {
     height: 100%;
     background: var(--accent);
-    border-radius: 3px;
-    transition: width 0.5s ease;
+    border-radius: 1px;
     width: 0%;
+    transition: width 600ms var(--ease-out-expo);
+  }
+  .convergence-status {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
-  /* Debate Feed */
-  .debate-feed { display: flex; flex-direction: column; gap: 1rem; }
-  .response-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.2rem;
-    animation: fadeIn 0.3s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  .response-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.8rem;
-  }
-  .participant-name { font-weight: 600; font-size: 0.9rem; }
-  .round-badge {
-    background: var(--surface2);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    color: var(--text-dim);
-  }
-  .response-text {
-    font-size: 0.85rem;
-    line-height: 1.6;
-    color: var(--text);
-    white-space: pre-wrap;
-    max-height: 300px;
+  /* ===== FEED ===== */
+  .feed {
+    padding: 2rem 2.5rem;
     overflow-y: auto;
+    max-height: calc(100vh - 56px);
   }
-
-  /* Results Section */
-  .results-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-    display: none;
+  .feed-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    text-align: center;
   }
-  .results-section.visible { display: block; }
-  .verdict {
-    font-size: 1.1rem;
-    font-weight: 700;
+  .feed-empty h2 {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: var(--cream-300);
     margin-bottom: 0.5rem;
   }
-  .verdict.approve { color: var(--accent); }
-  .verdict.changes { color: var(--danger); }
-  .verdict.notes { color: var(--warning); }
-  .executive-summary {
-    background: var(--surface2);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
+  .feed-empty p {
     font-size: 0.9rem;
-    line-height: 1.6;
+    color: var(--text-muted);
+    max-width: 360px;
+    line-height: 1.7;
   }
+
+  /* Response entries */
+  .response-entry {
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: entryReveal 400ms var(--ease-out-expo) forwards;
+  }
+  @keyframes entryReveal { to { opacity: 1; transform: translateY(0); } }
+  .response-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .response-participant {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--cream-100);
+  }
+  .response-round {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .response-body {
+    font-size: 0.88rem;
+    line-height: 1.75;
+    color: var(--cream-300);
+    max-width: 65ch;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .response-divider {
+    width: 40px;
+    height: 1px;
+    background: var(--border);
+    margin-top: 2rem;
+  }
+
+  /* ===== RESULTS ===== */
+  .results {
+    margin-top: 1rem;
+    padding: 2rem 2.5rem;
+    border-top: 1px solid var(--border-subtle);
+    display: none;
+  }
+  .results.visible { display: block; animation: entryReveal 500ms var(--ease-out-expo) forwards; }
+  .results-header {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--cream-100);
+    margin-bottom: 1.5rem;
+  }
+  .verdict-row {
+    display: flex;
+    gap: 2rem;
+    align-items: baseline;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .verdict-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .verdict-value {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .verdict-value.approve { color: var(--accent); }
+  .verdict-value.changes { color: var(--red-400); }
+  .verdict-value.notes { color: var(--amber-400); }
+
+  .exec-summary {
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: var(--cream-300);
+    max-width: 60ch;
+    margin-bottom: 2rem;
+  }
+
+  /* Findings table */
   .findings-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 1rem;
     font-size: 0.8rem;
   }
-  .findings-table th, .findings-table td {
-    padding: 0.5rem 0.8rem;
-    border-bottom: 1px solid var(--border);
+  .findings-table th {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
     text-align: left;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
   }
-  .findings-table th { color: var(--text-dim); font-weight: 500; }
-  .severity-critical { color: var(--danger); font-weight: 600; }
-  .severity-high { color: var(--warning); font-weight: 600; }
-  .severity-medium { color: var(--info); }
-  .severity-low { color: var(--text-dim); }
+  .findings-table td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--cream-300);
+    vertical-align: top;
+  }
+  .severity-critical { color: var(--red-400); font-weight: 600; }
+  .severity-high { color: var(--amber-400); font-weight: 600; }
+  .severity-medium { color: var(--blue-500); }
+  .severity-low { color: var(--text-muted); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar {
+      border-right: none;
+      border-bottom: 1px solid var(--border-subtle);
+      max-height: none;
+      padding: 1.5rem;
+    }
+    .feed { max-height: none; padding: 1.5rem; }
+    .header { padding: 1rem 1.5rem; }
+  }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>AI Counsel</h1>
-  <span class="badge">LIVE</span>
+<header class="header">
+  <div class="header-left">
+    <span class="logo">AI Counsel</span>
+    <div class="status-chip" id="statusChip">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusLabel">Ready</span>
+    </div>
+  </div>
+  <div class="header-meta" id="headerMeta"></div>
+</header>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Question</div>
+      <textarea id="question" placeholder="What should the council deliberate on?">Review this codebase for quality, security, and architectural issues.</textarea>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Panel</div>
+      <select id="panel"></select>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="input-row">
+        <div>
+          <div class="sidebar-label">Rounds</div>
+          <input type="number" id="rounds" value="2" min="1" max="5">
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="convergence-panel" id="convergencePanel" style="display:none">
+        <div class="convergence-header">
+          <span class="label">Convergence</span>
+          <span class="value" id="convergenceValue">0%</span>
+        </div>
+        <div class="convergence-track">
+          <div class="convergence-fill" id="convergenceFill"></div>
+        </div>
+        <div class="convergence-status" id="convergenceStatus"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:auto">
+      <button class="btn-primary" id="startBtn" onclick="startDeliberation()">Begin Deliberation</button>
+    </div>
+  </aside>
+
+  <main class="feed" id="feed">
+    <div class="feed-empty" id="feedEmpty">
+      <h2>The Council Awaits</h2>
+      <p>Select a panel and pose your question. Multiple AI models will debate, challenge each other, and converge on a recommendation.</p>
+    </div>
+  </main>
 </div>
 
-<div class="container">
-  <div class="input-section">
-    <div class="input-row">
-      <div style="flex:1">
-        <label>Question</label>
-        <textarea id="question" rows="3" placeholder="What should the council deliberate on?">Review this codebase for quality, security, and architectural issues.</textarea>
-      </div>
-    </div>
-    <div class="input-row">
-      <div style="flex:1">
-        <label>Panel</label>
-        <select id="panel"></select>
-      </div>
-      <div>
-        <label>Rounds</label>
-        <input type="number" id="rounds" value="2" min="1" max="5" style="width:80px">
-      </div>
-      <div style="display:flex;align-items:flex-end">
-        <button class="btn" id="startBtn" onclick="startDeliberation()">Start Deliberation</button>
-      </div>
-    </div>
+<div class="results" id="resultsSection">
+  <div class="results-header">Deliberation Complete</div>
+  <div class="verdict-row" id="verdictRow" style="display:none">
+    <div><div class="verdict-label">Verdict</div><div class="verdict-value" id="verdictText"></div></div>
+    <div><div class="verdict-label">Risk</div><div class="verdict-value" id="riskText"></div></div>
+    <div><div class="verdict-label">Findings</div><div class="verdict-value" id="findingsCount"></div></div>
   </div>
-
-  <div class="status-bar" id="statusBar" style="display:none">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Ready</span>
-    <div class="convergence-meter">
-      <div class="convergence-fill" id="convergenceFill"></div>
-    </div>
-    <span id="convergenceLabel" style="font-size:0.8rem;color:var(--text-dim)">0%</span>
-  </div>
-
-  <div class="debate-feed" id="debateFeed"></div>
-
-  <div class="results-section" id="resultsSection">
-    <div class="verdict" id="verdictText"></div>
-    <div id="summaryText"></div>
-    <div class="executive-summary" id="execSummary" style="display:none"></div>
-    <table class="findings-table" id="findingsTable" style="display:none">
-      <thead><tr><th>#</th><th>Severity</th><th>Category</th><th>Description</th></tr></thead>
-      <tbody id="findingsBody"></tbody>
-    </table>
-  </div>
+  <div class="exec-summary" id="execSummary" style="display:none"></div>
+  <table class="findings-table" id="findingsTable" style="display:none">
+    <thead><tr><th>#</th><th>Severity</th><th>Category</th><th>Description</th></tr></thead>
+    <tbody id="findingsBody"></tbody>
+  </table>
 </div>
 
 <script>
-let eventSource = null;
-
 async function loadPanels() {
   try {
     const resp = await fetch('/api/panels');
@@ -257,7 +475,7 @@ async function loadPanels() {
     for (const [name, info] of Object.entries(panels)) {
       const opt = document.createElement('option');
       opt.value = name;
-      opt.textContent = `${name} — ${info.description} (${info.participants} models, ${info.rounds} rounds)`;
+      opt.textContent = name;
       select.appendChild(opt);
     }
   } catch(e) { console.error('Failed to load panels:', e); }
@@ -267,141 +485,129 @@ function startDeliberation() {
   const question = document.getElementById('question').value;
   const panel = document.getElementById('panel').value;
   const rounds = parseInt(document.getElementById('rounds').value);
-
   if (!question.trim()) return;
 
-  // Reset UI
-  document.getElementById('debateFeed').innerHTML = '';
+  // Reset
+  const feed = document.getElementById('feed');
+  feed.innerHTML = '';
   document.getElementById('resultsSection').classList.remove('visible');
-  document.getElementById('statusBar').style.display = 'flex';
-  document.getElementById('statusDot').classList.add('active');
-  document.getElementById('startBtn').disabled = true;
+  document.getElementById('convergencePanel').style.display = 'block';
   document.getElementById('convergenceFill').style.width = '0%';
-  document.getElementById('convergenceLabel').textContent = '0%';
+  document.getElementById('convergenceValue').textContent = '0%';
+  document.getElementById('convergenceStatus').textContent = '';
+  document.getElementById('statusDot').classList.add('active');
+  document.getElementById('statusChip').classList.add('live');
+  document.getElementById('statusLabel').textContent = 'Deliberating';
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('headerMeta').textContent = '';
 
-  // Start SSE stream
   const body = JSON.stringify({ question, panel, rounds, working_directory: '.' });
 
   fetch('/api/deliberate/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: body,
+    body,
   }).then(response => {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let responseCount = 0;
 
     function read() {
       reader.read().then(({ done, value }) => {
-        if (done) {
-          onComplete();
-          return;
-        }
+        if (done) { onComplete(); return; }
         buffer += decoder.decode(value, { stream: true });
-
-        // Parse SSE events from buffer
         const events = buffer.split('\n\n');
-        buffer = events.pop(); // Keep incomplete event in buffer
-
-        for (const eventBlock of events) {
-          const lines = eventBlock.split('\n');
-          let eventType = '';
-          let eventData = '';
+        buffer = events.pop();
+        for (const block of events) {
+          const lines = block.split('\n');
+          let type = '', data = '';
           for (const line of lines) {
-            if (line.startsWith('event: ')) eventType = line.slice(7);
-            else if (line.startsWith('data: ')) eventData = line.slice(6);
+            if (line.startsWith('event: ')) type = line.slice(7);
+            else if (line.startsWith('data: ')) data = line.slice(6);
           }
-          if (eventType && eventData) {
-            try {
-              handleEvent(eventType, JSON.parse(eventData));
-            } catch(e) { console.error('Parse error:', e); }
+          if (type && data) {
+            try { handleEvent(type, JSON.parse(data)); } catch(e) {}
           }
         }
         read();
       });
     }
     read();
-  }).catch(err => {
-    setStatus('Error: ' + err.message);
-    onComplete();
-  });
+  }).catch(err => { onComplete(); });
 }
 
 function handleEvent(type, data) {
   switch(type) {
     case 'status':
-      setStatus(data.phase === 'starting' ? `Starting with ${data.participants?.length || 0} models...` : 'Deliberating...');
+      if (data.participants) {
+        document.getElementById('headerMeta').textContent =
+          data.participants.length + ' models \u00b7 ' + (data.rounds || 2) + ' rounds';
+      }
       break;
-    case 'response':
-      addResponse(data);
-      break;
-    case 'convergence':
-      updateConvergence(data);
-      break;
-    case 'summary':
-      showSummary(data);
-      break;
-    case 'findings':
-      showFindings(data);
-      break;
+    case 'response': addResponse(data); break;
+    case 'convergence': updateConvergence(data); break;
+    case 'summary': showSummary(data); break;
+    case 'findings': showFindings(data); break;
     case 'complete':
-      setStatus(`Complete — ${data.rounds_completed} round(s)`);
+      document.getElementById('statusLabel').textContent =
+        'Complete \u00b7 ' + data.rounds_completed + ' rounds';
       onComplete();
       break;
     case 'error':
-      setStatus('Error: ' + data.message);
+      document.getElementById('statusLabel').textContent = 'Error';
       onComplete();
       break;
   }
 }
 
-function setStatus(text) {
-  document.getElementById('statusText').textContent = text;
-}
-
 function addResponse(data) {
-  const feed = document.getElementById('debateFeed');
-  const card = document.createElement('div');
-  card.className = 'response-card';
-  card.innerHTML = `
-    <div class="response-header">
-      <span class="participant-name">${escapeHtml(data.participant)}</span>
-      <span class="round-badge">Round ${data.round}</span>
+  const feed = document.getElementById('feed');
+  const entry = document.createElement('div');
+  entry.className = 'response-entry';
+  entry.innerHTML = `
+    <div class="response-meta">
+      <span class="response-participant">${esc(data.participant)}</span>
+      <span class="response-round">Round ${data.round}</span>
     </div>
-    <div class="response-text">${escapeHtml(data.response)}</div>
+    <div class="response-body">${esc(data.response)}</div>
+    <div class="response-divider"></div>
   `;
-  feed.appendChild(card);
-  card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  feed.appendChild(entry);
+  entry.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 function updateConvergence(data) {
   const pct = Math.round(data.similarity * 100);
   document.getElementById('convergenceFill').style.width = pct + '%';
-  document.getElementById('convergenceLabel').textContent = pct + '% — ' + data.status;
+  document.getElementById('convergenceValue').textContent = pct + '%';
+  document.getElementById('convergenceStatus').textContent = data.status;
 }
 
 function showSummary(data) {
   const section = document.getElementById('resultsSection');
   section.classList.add('visible');
-  document.getElementById('summaryText').textContent = data.consensus;
-
   if (data.executive_summary) {
-    const exec = document.getElementById('execSummary');
-    exec.style.display = 'block';
-    exec.textContent = data.executive_summary;
+    const el = document.getElementById('execSummary');
+    el.style.display = 'block';
+    el.textContent = data.executive_summary;
   }
 }
 
 function showFindings(data) {
   const section = document.getElementById('resultsSection');
   section.classList.add('visible');
+  const row = document.getElementById('verdictRow');
+  row.style.display = 'flex';
 
-  const verdict = document.getElementById('verdictText');
-  verdict.textContent = `${data.verdict} — Risk: ${data.risk_level} — ${data.findings_count} finding(s)`;
-  verdict.className = 'verdict ' + (
+  const vt = document.getElementById('verdictText');
+  vt.textContent = data.verdict;
+  vt.className = 'verdict-value ' + (
     data.verdict === 'APPROVE' ? 'approve' :
     data.verdict === 'REQUEST_CHANGES' ? 'changes' : 'notes'
   );
+  document.getElementById('riskText').textContent = data.risk_level;
+  document.getElementById('findingsCount').textContent = data.findings_count;
 
   if (data.findings && data.findings.length > 0) {
     const table = document.getElementById('findingsTable');
@@ -414,7 +620,7 @@ function showFindings(data) {
         <td>${i+1}</td>
         <td class="severity-${f.severity}">${f.severity}</td>
         <td>${f.category}</td>
-        <td>${escapeHtml(f.description)}</td>
+        <td>${esc(f.description)}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -423,16 +629,16 @@ function showFindings(data) {
 
 function onComplete() {
   document.getElementById('statusDot').classList.remove('active');
+  document.getElementById('statusChip').classList.remove('live');
   document.getElementById('startBtn').disabled = false;
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+function esc(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
 }
 
-// Initialize
 loadPanels();
 </script>
 </body>
