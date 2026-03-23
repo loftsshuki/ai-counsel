@@ -310,11 +310,15 @@
   }
   .cat-card:hover::after { opacity: 1; }
   .cat-icon {
-    font-size: 1.4rem;
-    margin-bottom: 0.6rem;
+    width: 22px;
+    height: 22px;
+    margin-bottom: 0.7rem;
     display: block;
-    line-height: 1;
+    color: var(--green-400);
+    opacity: 0.8;
   }
+  .cat-card:hover .cat-icon,
+  .chain-card:hover .cat-icon { opacity: 1; }
   .cat-name {
     font-family: var(--font-body);
     font-size: 0.88rem;
@@ -347,7 +351,7 @@
   /* Chain cards — distinct from regular cards */
   .chain-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 0.75rem;
   }
   .chain-card {
@@ -376,7 +380,7 @@
     transform: translateY(-3px);
     box-shadow: 0 8px 30px oklch(12% 0.04 155 / 0.5), 0 0 20px oklch(40% 0.10 155 / 0.08);
   }
-  .chain-card .cat-icon { font-size: 1.5rem; margin-bottom: 0.65rem; }
+  .chain-card .cat-icon { width: 24px; height: 24px; margin-bottom: 0.7rem; }
   .chain-card .cat-name {
     font-size: 0.92rem;
     font-weight: 600;
@@ -390,16 +394,19 @@
   }
   .chain-card .chain-steps {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.3rem;
-    margin-top: 0.65rem;
+    gap: 0.25rem 0.3rem;
+    margin-top: 0.7rem;
     font-family: var(--font-mono);
-    font-size: 0.55rem;
-    color: var(--green-400);
-    letter-spacing: 0.04em;
+    font-size: 0.6rem;
+    color: var(--green-300);
+    letter-spacing: 0.03em;
+    line-height: 1.6;
   }
   .chain-card .chain-steps .arrow {
     color: var(--cream-700);
+    font-size: 0.55rem;
   }
 
   /* ===== STATUS BAR ===== */
@@ -649,12 +656,7 @@
   </div>
 
   <div class="categories" id="categories">
-    <div class="cat-label">Quick Start</div>
-    <div class="cat-grid" id="catGrid"></div>
-    <div class="chain-section" id="chainSection">
-      <div class="cat-label" style="margin-top:2rem">Comprehensive Reviews</div>
-      <div class="chain-grid" id="chainGrid"></div>
-    </div>
+    <div id="catSections"></div>
   </div>
 </section>
 
@@ -691,64 +693,153 @@
 <div class="footer">AI Counsel &middot; Multi-model deliberation engine</div>
 
 <script>
-const CATEGORIES = [
-  { icon: "\u{1F50D}", name: "Code Review", desc: "Security, architecture, correctness", question: "Review this codebase for quality, security, and architectural issues. Identify specific problems with file references." },
-  { icon: "\u{1F9E0}", name: "Architecture", desc: "System design decisions", question: "Evaluate the current architecture of this project. What are the strengths, weaknesses, and what would you change?" },
-  { icon: "\u{1F6E1}", name: "Security Audit", desc: "Vulnerabilities & threats", question: "Perform a thorough security audit. Check for XSS, injection, auth bypass, exposed secrets, and OWASP Top 10 issues." },
-  { icon: "\u26A1", name: "Performance", desc: "Speed & optimization", question: "Analyze this codebase for performance issues. Look for N+1 queries, missing indexes, unbounded loops, and memory leaks." },
-  { icon: "\u{1F4A1}", name: "Brainstorm", desc: "Generate & debate ideas", question: "Brainstorm creative approaches to improve this project. Each model should propose a different direction and defend it." },
-  { icon: "\u{1F680}", name: "Ship Readiness", desc: "Is this ready for production?", question: "Is this codebase ready to ship to production? Check error handling, logging, monitoring, edge cases, and user experience." },
-  { icon: "\u{1F4CA}", name: "Tech Strategy", desc: "Stack & tooling choices", question: "Evaluate our technology choices. Are we using the right frameworks, databases, and infrastructure for our scale and goals?" },
-  { icon: "\u{1F3AF}", name: "UX & Conversion", desc: "User experience review", question: "Review the user-facing experience. Is the flow intuitive? Are calls-to-action clear? Would a visitor actually convert?" },
-  { icon: "\u{1F4DD}", name: "Documentation", desc: "Docs quality & coverage", question: "Evaluate the documentation quality. Are setup instructions clear? Are APIs documented? Would a new developer be able to onboard?" },
-  { icon: "\u2696\uFE0F", name: "Trade-offs", desc: "Weigh competing options", question: "We need to make a decision. Analyze the trade-offs between the approaches described and recommend the best path forward." },
-  { icon: "\u{1F527}", name: "Refactoring", desc: "Clean up & simplify", question: "Identify the highest-impact refactoring opportunities. What code should be simplified, consolidated, or restructured?" },
-  { icon: "\u{1F30D}", name: "Accessibility", desc: "WCAG & inclusive design", question: "Audit this project for accessibility. Check ARIA labels, keyboard navigation, color contrast, semantic HTML, and screen reader support." },
-  { icon: "\u{1F4E6}", name: "Full Stack Audit", desc: "Chain: architecture \u2192 code \u2192 security \u2192 performance", question: "Run a complete full-stack audit of this codebase. Start with architecture review, then code quality, then security, then performance. Identify issues at every layer.", panel: "full-stack-audit", badge: "CHAIN" },
-  { icon: "\u{1F5A5}\uFE0F", name: "Frontend Review", desc: "Chain: UX \u2192 accessibility \u2192 performance \u2192 security", question: "Run a complete frontend review. Check user experience flow, accessibility compliance, frontend performance (bundle size, rendering), and client-side security.", panel: "frontend-review", badge: "CHAIN" },
-  { icon: "\u2699\uFE0F", name: "Backend Review", desc: "Chain: architecture \u2192 security \u2192 data \u2192 reliability", question: "Run a complete backend review. Check API architecture, authentication/authorization, database design and queries, error handling, and system reliability.", panel: "backend-review", badge: "CHAIN" },
-  { icon: "\u{1F680}", name: "Launch Readiness", desc: "Chain: security \u2192 performance \u2192 UX \u2192 ops", question: "Is this ready to launch? Run security audit, performance check, UX review, and ops readiness (logging, monitoring, error handling, deployment).", panel: "launch-readiness", badge: "CHAIN" },
+// Refined line icons (thin stroke, geometric)
+const IC = {
+  search:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+  grid:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  shield:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l8 4v6c0 5.25-3.5 8.75-8 10-4.5-1.25-8-4.75-8-10V6l8-4z"/></svg>',
+  bolt:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+  wrench:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.77 3.77z"/></svg>',
+  flask:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h6M10 3v6l-5 8.5a1.5 1.5 0 001.3 2.25h11.4a1.5 1.5 0 001.3-2.25L14 9V3"/></svg>',
+  sparkle:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5.6 5.6l2.85 2.85m7.1 7.1l2.85 2.85M18.4 5.6l-2.85 2.85m-7.1 7.1L5.6 18.4"/></svg>',
+  puzzle:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 01-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 10-3.214 3.214c.446.166.855.497.925.968a.979.979 0 01-.276.837l-1.61 1.61a2.404 2.404 0 01-1.705.707 2.402 2.402 0 01-1.704-.706l-1.568-1.568a1.026 1.026 0 00-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 11-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 00-.289-.877l-1.568-1.568A2.402 2.402 0 011.998 12c0-.617.236-1.234.706-1.704L4.315 8.685a.98.98 0 01.837-.276c.47.07.802.48.968.925a2.501 2.501 0 103.214-3.214c-.446-.166-.855-.497-.925-.968a.979.979 0 01.276-.837l1.61-1.61a2.404 2.404 0 011.705-.707c.618 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 113.237 3.237c-.464.18-.894.527-.967 1.02z"/></svg>',
+  bot:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 2v6M9 13h.01M15 13h.01M10 17h4"/></svg>',
+  chat:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+  bulb:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>',
+  target:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  chart:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>',
+  scale:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M3 7l3 5h6L9 7M15 7l3 5h6l-3-5"/></svg>',
+  coin:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8M8 14h8"/></svg>',
+  globe:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>',
+  pen:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/></svg>',
+  doc:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>',
+  mail:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>',
+  news:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h4"/></svg>',
+  rocket:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/></svg>',
+  access:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>',
+  clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>',
+  plug:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22v-5M9 8V2M15 8V2M7 8h10a2 2 0 012 2v2a5 5 0 01-5 5h-4a5 5 0 01-5-5v-2a2 2 0 012-2z"/></svg>',
+  stack:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+  monitor:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  server:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg>',
+  flag:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>',
+};
+
+const SECTIONS = [
+  {
+    label: "Engineering",
+    items: [
+      { icon: IC.search, name: "Code Review", desc: "Security, architecture, correctness", question: "Review this codebase for quality, security, and architectural issues. Identify specific problems with file references." },
+      { icon: IC.grid, name: "Architecture", desc: "System design & structure", question: "Evaluate the current architecture of this project. What are the strengths, weaknesses, and what would you change?" },
+      { icon: IC.shield, name: "Security Audit", desc: "Vulnerabilities & threat modeling", question: "Perform a thorough security audit. Check for XSS, injection, auth bypass, exposed secrets, and OWASP Top 10 issues." },
+      { icon: IC.bolt, name: "Performance", desc: "Speed, memory & optimization", question: "Analyze this codebase for performance issues. Look for N+1 queries, missing indexes, unbounded loops, and memory leaks." },
+      { icon: IC.wrench, name: "Refactoring", desc: "Simplify & consolidate code", question: "Identify the highest-impact refactoring opportunities. What code should be simplified, consolidated, or restructured?" },
+      { icon: IC.flask, name: "Test Strategy", desc: "Coverage, gaps & test design", question: "Evaluate the testing strategy. What's covered? What's missing? Are the right things being tested? Suggest a testing roadmap prioritized by risk." },
+    ]
+  },
+  {
+    label: "AI & Prompt Engineering",
+    items: [
+      { icon: IC.sparkle, name: "Prompt Improver", desc: "Refine & strengthen any prompt", question: "I have a prompt that needs improvement. Each model should critique it from a different angle (clarity, specificity, edge cases, output format) and propose an improved version. Then debate which version is best." },
+      { icon: IC.puzzle, name: "Skill Builder", desc: "Design Claude Code skills", question: "Help me design a new Claude Code skill. What should it do? What's the trigger? What context does it need? Each model should propose a different skill architecture and defend why theirs is most useful." },
+      { icon: IC.bot, name: "Agent Design", desc: "Multi-agent workflow planning", question: "Design an AI agent workflow for this task. What agents are needed? What tools should each have? How do they coordinate? Debate the trade-offs between autonomous and supervised approaches." },
+      { icon: IC.chat, name: "System Prompt Lab", desc: "Craft & debate system prompts", question: "Each model should write a system prompt for the described use case, then critique each other's versions. Focus on: instruction clarity, edge case handling, output consistency, and tone." },
+    ]
+  },
+  {
+    label: "Product & Strategy",
+    items: [
+      { icon: IC.bulb, name: "Brainstorm", desc: "Generate & debate ideas", question: "Brainstorm creative approaches to this challenge. Each model should propose a different direction and defend it. Push for unexpected ideas, not safe ones." },
+      { icon: IC.target, name: "UX & Conversion", desc: "User flow & conversion audit", question: "Review the user-facing experience. Is the flow intuitive? Are CTAs clear? Would a visitor actually convert? Think like a real customer, not a developer." },
+      { icon: IC.chart, name: "Tech Strategy", desc: "Stack, tooling & roadmap", question: "Evaluate our technology choices. Are we using the right frameworks, databases, and infrastructure for our scale and goals? What should we change in the next 6 months?" },
+      { icon: IC.scale, name: "Trade-off Analysis", desc: "Weigh competing options", question: "We need to make a decision. Analyze the trade-offs between the approaches described and recommend the best path forward. Be specific about what we gain and lose with each option." },
+      { icon: IC.coin, name: "Pricing & Monetization", desc: "Revenue model review", question: "Evaluate our pricing strategy and monetization approach. Are we leaving money on the table? What would competitors charge? Debate freemium vs paid vs usage-based models." },
+      { icon: IC.globe, name: "Go-to-Market", desc: "Launch & growth strategy", question: "Design a go-to-market strategy. Who is the ideal customer? What channels reach them? What's the messaging? Each model should propose a different GTM approach and defend it." },
+    ]
+  },
+  {
+    label: "Content & Writing",
+    items: [
+      { icon: IC.pen, name: "Copy Review", desc: "Tone, clarity & persuasion", question: "Review this copy for effectiveness. Is it clear? Persuasive? On-brand? Each model should critique from a different angle: clarity, emotional resonance, and conversion potential." },
+      { icon: IC.doc, name: "Documentation", desc: "Docs quality & completeness", question: "Evaluate the documentation quality. Are setup instructions clear? Are APIs documented? Would a new developer be able to onboard quickly?" },
+      { icon: IC.mail, name: "Email & Outreach", desc: "Cold email & sequence review", question: "Review this outreach sequence. Is the subject line compelling? Is the value prop clear in the first sentence? Would you reply to this? Suggest improved versions." },
+      { icon: IC.news, name: "Blog & SEO", desc: "Content strategy & optimization", question: "Evaluate this content for SEO effectiveness and reader engagement. Is the headline compelling? Is the structure scannable? Are we targeting the right keywords?" },
+    ]
+  },
+  {
+    label: "Operations & Quality",
+    items: [
+      { icon: IC.rocket, name: "Ship Readiness", desc: "Production readiness check", question: "Is this codebase ready to ship to production? Check error handling, logging, monitoring, edge cases, and user experience." },
+      { icon: IC.access, name: "Accessibility", desc: "WCAG & inclusive design", question: "Audit this project for accessibility. Check ARIA labels, keyboard navigation, color contrast, semantic HTML, and screen reader support." },
+      { icon: IC.clipboard, name: "Compliance Check", desc: "GDPR, SOC 2 & privacy", question: "Review this project for regulatory compliance. Check data handling practices, consent flows, data retention, privacy policies, and GDPR/CCPA requirements." },
+      { icon: IC.plug, name: "API Design Review", desc: "Endpoints, contracts & versioning", question: "Review the API design. Are endpoints RESTful? Are error responses consistent? Is versioning handled? Is the API documented well enough for third-party developers?" },
+    ]
+  },
+  {
+    label: "Comprehensive Reviews",
+    isChain: true,
+    items: [
+      { icon: IC.stack, name: "Full Stack Audit", desc: "Architecture \u2192 Code \u2192 Security \u2192 Performance", question: "Run a complete full-stack audit of this codebase. Start with architecture review, then code quality, then security, then performance. Identify issues at every layer.", panel: "full-stack-audit", badge: "CHAIN" },
+      { icon: IC.monitor, name: "Frontend Review", desc: "UX \u2192 Accessibility \u2192 Performance \u2192 Security", question: "Run a complete frontend review. Check user experience flow, accessibility compliance, frontend performance (bundle size, rendering), and client-side security.", panel: "frontend-review", badge: "CHAIN" },
+      { icon: IC.server, name: "Backend Review", desc: "Architecture \u2192 Security \u2192 Data \u2192 Reliability", question: "Run a complete backend review. Check API architecture, authentication/authorization, database design and queries, error handling, and system reliability.", panel: "backend-review", badge: "CHAIN" },
+      { icon: IC.flag, name: "Launch Readiness", desc: "Security \u2192 Performance \u2192 UX \u2192 Ops", question: "Is this ready to launch? Run security audit, performance check, UX review, and ops readiness (logging, monitoring, error handling, deployment).", panel: "launch-readiness", badge: "CHAIN" },
+    ]
+  },
 ];
 
 function renderCategories() {
-  const grid = document.getElementById('catGrid');
-  const chainGrid = document.getElementById('chainGrid');
+  const container = document.getElementById('catSections');
 
-  CATEGORIES.forEach(cat => {
-    const isChain = !!cat.badge;
-    const card = document.createElement('div');
+  SECTIONS.forEach(section => {
+    const wrapper = document.createElement('div');
+    wrapper.style.marginBottom = '2.5rem';
 
-    if (isChain) {
-      card.className = 'chain-card';
-      const steps = cat.desc.split('\u2192').map(s => s.trim());
-      const stepsHtml = steps.map((s, i) =>
-        i < steps.length - 1 ? `<span>${s}</span><span class="arrow">\u2192</span>` : `<span>${s}</span>`
-      ).join('');
-      card.innerHTML = `
-        <span class="cat-icon">${cat.icon}</span>
-        <div class="cat-name">${cat.name}</div>
-        <div class="cat-desc">${cat.desc}</div>
-        <div class="chain-steps">${stepsHtml}</div>
-      `;
-    } else {
-      card.className = 'cat-card';
-      card.innerHTML = `<span class="cat-icon">${cat.icon}</span><div class="cat-name">${cat.name}</div><div class="cat-desc">${cat.desc}</div>`;
-    }
+    const label = document.createElement('div');
+    label.className = 'cat-label';
+    label.textContent = section.label;
+    wrapper.appendChild(label);
 
-    card.onclick = () => {
-      document.getElementById('question').value = cat.question;
-      if (cat.panel) {
-        const sel = document.getElementById('panel');
-        for (let i = 0; i < sel.options.length; i++) {
-          if (sel.options[i].value === cat.panel) { sel.selectedIndex = i; break; }
-        }
+    const grid = document.createElement('div');
+    grid.className = section.isChain ? 'chain-grid' : 'cat-grid';
+
+    section.items.forEach(cat => {
+      const card = document.createElement('div');
+
+      if (cat.badge) {
+        card.className = 'chain-card';
+        const steps = cat.desc.split('\u2192').map(s => s.trim());
+        const stepsHtml = steps.map((s, i) =>
+          i < steps.length - 1 ? `<span>${s}</span><span class="arrow">\u2192</span>` : `<span>${s}</span>`
+        ).join('');
+        card.innerHTML = `
+          <div class="cat-icon">${cat.icon}</div>
+          <div class="cat-name">${cat.name}</div>
+          <div class="cat-desc">${cat.desc}</div>
+          <div class="chain-steps">${stepsHtml}</div>
+        `;
+      } else {
+        card.className = 'cat-card';
+        card.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div><div class="cat-desc">${cat.desc}</div>`;
       }
-      autoResize(document.getElementById('question'));
-      document.getElementById('question').focus();
-    };
 
-    if (isChain) chainGrid.appendChild(card);
-    else grid.appendChild(card);
+      card.onclick = () => {
+        document.getElementById('question').value = cat.question;
+        if (cat.panel) {
+          const sel = document.getElementById('panel');
+          for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === cat.panel) { sel.selectedIndex = i; break; }
+          }
+        }
+        autoResize(document.getElementById('question'));
+        document.getElementById('question').focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      grid.appendChild(card);
+    });
+
+    wrapper.appendChild(grid);
+    container.appendChild(wrapper);
   });
 }
 
