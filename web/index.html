@@ -48,18 +48,85 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ===== TOPO SVG BACKGROUND ===== */
-  .topo-bg {
+  /* ===== ANIMATED BACKGROUND ===== */
+  .bg-layer {
     position: fixed;
     inset: 0;
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
   }
-  .topo-bg svg {
+  .bg-layer svg {
     width: 100%;
     height: 100%;
-    opacity: 0.07;
+  }
+  /* Topo lines — subtle drift */
+  .topo-group {
+    animation: topoDrift 60s linear infinite;
+  }
+  @keyframes topoDrift {
+    0% { transform: translate(0, 0); }
+    50% { transform: translate(-15px, 8px); }
+    100% { transform: translate(0, 0); }
+  }
+  /* Floating orbs — slow ambient movement */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0;
+    animation: orbFloat 20s ease-in-out infinite;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: oklch(25% 0.08 155);
+    top: -10%; left: 20%;
+    animation-delay: 0s;
+    animation-duration: 25s;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: oklch(20% 0.06 155);
+    bottom: 5%; right: 10%;
+    animation-delay: -8s;
+    animation-duration: 30s;
+  }
+  .orb-3 {
+    width: 350px; height: 350px;
+    background: oklch(22% 0.05 80);
+    top: 40%; left: -5%;
+    animation-delay: -15s;
+    animation-duration: 35s;
+  }
+  @keyframes orbFloat {
+    0%, 100% { opacity: 0.4; transform: translate(0, 0) scale(1); }
+    25% { opacity: 0.6; transform: translate(30px, -20px) scale(1.05); }
+    50% { opacity: 0.5; transform: translate(-15px, 25px) scale(0.95); }
+    75% { opacity: 0.65; transform: translate(20px, 10px) scale(1.02); }
+  }
+  /* Scan line — war room feel */
+  .scan-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(63% 0.14 155 / 0.15), transparent);
+    animation: scanMove 8s ease-in-out infinite;
+  }
+  @keyframes scanMove {
+    0% { top: -2%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 102%; opacity: 0; }
+  }
+  /* Grid dots — subtle data texture */
+  .grid-dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(oklch(30% 0.05 155) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.12;
   }
 
   /* ===== HERO ===== */
@@ -123,7 +190,7 @@
   /* ===== SEARCH BOX ===== */
   .search-wrap {
     width: 100%;
-    max-width: 720px;
+    max-width: 860px;
     opacity: 0;
     animation: fadeUp 600ms 650ms var(--ease-out-expo) forwards;
   }
@@ -192,8 +259,8 @@
   /* ===== CATEGORY CARDS ===== */
   .categories {
     width: 100%;
-    max-width: 720px;
-    margin-top: 2.5rem;
+    max-width: 860px;
+    margin-top: 3rem;
     opacity: 0;
     animation: fadeUp 600ms 800ms var(--ease-out-expo) forwards;
   }
@@ -204,54 +271,135 @@
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
   }
   .cat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+    gap: 0.75rem;
   }
   .cat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.85rem 1rem;
+    position: relative;
+    background: oklch(14% 0.035 155 / 0.7);
+    backdrop-filter: blur(4px);
+    border: 1px solid oklch(24% 0.04 155 / 0.6);
+    border-radius: 6px;
+    padding: 1.25rem 1.2rem 1.1rem;
     cursor: pointer;
-    transition: border-color 200ms, transform 150ms var(--ease-out-quart);
+    transition: border-color 250ms var(--ease-out-quart),
+                transform 200ms var(--ease-out-quart),
+                background 250ms var(--ease-out-quart),
+                box-shadow 250ms var(--ease-out-quart);
   }
   .cat-card:hover {
-    border-color: var(--green-600);
-    transform: translateY(-2px);
+    border-color: var(--green-500);
+    background: oklch(17% 0.05 155 / 0.8);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px oklch(12% 0.04 155 / 0.4);
   }
+  .cat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(63% 0.10 155 / 0.2), transparent);
+    opacity: 0;
+    transition: opacity 250ms;
+  }
+  .cat-card:hover::after { opacity: 1; }
   .cat-icon {
-    font-size: 1.2rem;
-    margin-bottom: 0.35rem;
+    font-size: 1.4rem;
+    margin-bottom: 0.6rem;
     display: block;
     line-height: 1;
   }
   .cat-name {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--cream-200);
-    margin-bottom: 0.15rem;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--cream-100);
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.01em;
   }
   .cat-desc {
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    line-height: 1.4;
+    font-size: 0.72rem;
+    color: var(--cream-700);
+    line-height: 1.5;
+    font-weight: 300;
   }
   .cat-badge {
     display: inline-block;
     font-family: var(--font-mono);
-    font-size: 0.5rem;
+    font-size: 0.48rem;
     font-weight: 500;
-    letter-spacing: 0.1em;
-    background: var(--green-600);
-    color: var(--cream-50);
-    padding: 0.1rem 0.35rem;
+    letter-spacing: 0.12em;
+    background: oklch(40% 0.10 155 / 0.5);
+    color: var(--green-300);
+    padding: 0.12rem 0.4rem;
     border-radius: 2px;
-    margin-left: 0.4rem;
+    margin-left: 0.5rem;
     vertical-align: middle;
+    border: 1px solid oklch(40% 0.08 155 / 0.3);
+  }
+
+  /* Chain cards — distinct from regular cards */
+  .chain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+    gap: 0.75rem;
+  }
+  .chain-card {
+    position: relative;
+    background: oklch(16% 0.05 155 / 0.6);
+    backdrop-filter: blur(4px);
+    border: 1px solid oklch(40% 0.08 155 / 0.35);
+    border-radius: 6px;
+    padding: 1.35rem 1.2rem 1.15rem;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 250ms var(--ease-out-quart),
+                transform 200ms var(--ease-out-quart),
+                box-shadow 250ms var(--ease-out-quart);
+  }
+  .chain-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--green-600), var(--green-400), var(--green-600));
+    opacity: 0.6;
+  }
+  .chain-card:hover {
+    border-color: var(--green-400);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px oklch(12% 0.04 155 / 0.5), 0 0 20px oklch(40% 0.10 155 / 0.08);
+  }
+  .chain-card .cat-icon { font-size: 1.5rem; margin-bottom: 0.65rem; }
+  .chain-card .cat-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--cream-50);
+  }
+  .chain-card .cat-desc {
+    font-size: 0.72rem;
+    color: var(--cream-500);
+    line-height: 1.5;
+    font-weight: 300;
+  }
+  .chain-card .chain-steps {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.65rem;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: var(--green-400);
+    letter-spacing: 0.04em;
+  }
+  .chain-card .chain-steps .arrow {
+    color: var(--cream-700);
   }
 
   /* ===== STATUS BAR ===== */
@@ -448,37 +596,40 @@
 </head>
 <body>
 
-<!-- Topo contour background -->
-<div class="topo-bg">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
-  <defs>
-    <style>
-      .topo-line { fill: none; stroke: oklch(63% 0.14 155); stroke-width: 0.8; }
-    </style>
-  </defs>
-  <path class="topo-line" d="M-50,200 Q150,180 300,220 T600,190 T900,230 T1050,200"/>
-  <path class="topo-line" d="M-50,240 Q200,210 350,260 T650,225 T950,270 T1050,240"/>
-  <path class="topo-line" d="M-50,290 Q180,260 320,310 T620,275 T920,320 T1050,290"/>
-  <path class="topo-line" d="M-50,350 Q210,320 380,370 T680,335 T980,380 T1050,350"/>
-  <path class="topo-line" d="M-50,420 Q170,390 340,440 T640,405 T940,450 T1050,420"/>
-  <path class="topo-line" d="M-50,480 Q220,450 390,500 T690,465 T990,510 T1050,480"/>
-  <path class="topo-line" d="M-50,550 Q190,520 350,570 T650,535 T950,580 T1050,550"/>
-  <path class="topo-line" d="M-50,620 Q230,590 400,640 T700,605 T1000,650 T1050,620"/>
-  <path class="topo-line" d="M-50,690 Q200,660 370,710 T670,675 T970,720 T1050,690"/>
-  <path class="topo-line" d="M-50,760 Q240,730 410,780 T710,745 T1010,790 T1050,760"/>
-  <path class="topo-line" d="M-50,830 Q180,800 350,850 T650,815 T950,860 T1050,830"/>
-  <path class="topo-line" d="M-50,900 Q220,870 390,920 T690,885 T990,930 T1050,900"/>
-  <!-- Circular contours -->
-  <ellipse class="topo-line" cx="500" cy="500" rx="280" ry="180" transform="rotate(-8 500 500)"/>
-  <ellipse class="topo-line" cx="500" cy="500" rx="220" ry="140" transform="rotate(-8 500 500)"/>
-  <ellipse class="topo-line" cx="500" cy="500" rx="160" ry="100" transform="rotate(-8 500 500)"/>
-  <ellipse class="topo-line" cx="500" cy="500" rx="100" ry="60" transform="rotate(-8 500 500)"/>
-  <ellipse class="topo-line" cx="300" cy="300" rx="150" ry="90" transform="rotate(15 300 300)"/>
-  <ellipse class="topo-line" cx="300" cy="300" rx="100" ry="55" transform="rotate(15 300 300)"/>
-  <ellipse class="topo-line" cx="750" cy="700" rx="180" ry="110" transform="rotate(-12 750 700)"/>
-  <ellipse class="topo-line" cx="750" cy="700" rx="120" ry="70" transform="rotate(-12 750 700)"/>
-  <ellipse class="topo-line" cx="750" cy="700" rx="60" ry="35" transform="rotate(-12 750 700)"/>
-</svg>
+<!-- Animated layered background -->
+<div class="bg-layer">
+  <!-- Grid dots texture -->
+  <div class="grid-dots"></div>
+  <!-- Floating orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <!-- Scanning line -->
+  <div class="scan-line"></div>
+  <!-- Topo contour lines -->
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+    <defs><style>.tl { fill: none; stroke: oklch(50% 0.10 155); stroke-width: 0.6; opacity: 0.08; }</style></defs>
+    <g class="topo-group">
+      <path class="tl" d="M-50,180 Q150,160 300,200 T600,170 T900,210 T1050,180"/>
+      <path class="tl" d="M-50,230 Q200,200 350,250 T650,215 T950,260 T1050,230"/>
+      <path class="tl" d="M-50,290 Q180,260 320,310 T620,275 T920,320 T1050,290"/>
+      <path class="tl" d="M-50,360 Q210,330 380,380 T680,345 T980,390 T1050,360"/>
+      <path class="tl" d="M-50,440 Q170,410 340,460 T640,425 T940,470 T1050,440"/>
+      <path class="tl" d="M-50,520 Q220,490 390,540 T690,505 T990,550 T1050,520"/>
+      <path class="tl" d="M-50,600 Q190,570 350,620 T650,585 T950,630 T1050,600"/>
+      <path class="tl" d="M-50,680 Q230,650 400,700 T700,665 T1000,710 T1050,680"/>
+      <path class="tl" d="M-50,760 Q200,730 370,780 T670,745 T970,790 T1050,760"/>
+      <path class="tl" d="M-50,840 Q240,810 410,860 T710,825 T1010,870 T1050,840"/>
+      <ellipse class="tl" cx="500" cy="480" rx="300" ry="190" transform="rotate(-6 500 480)"/>
+      <ellipse class="tl" cx="500" cy="480" rx="230" ry="145" transform="rotate(-6 500 480)"/>
+      <ellipse class="tl" cx="500" cy="480" rx="160" ry="100" transform="rotate(-6 500 480)"/>
+      <ellipse class="tl" cx="500" cy="480" rx="90" ry="55" transform="rotate(-6 500 480)"/>
+      <ellipse class="tl" cx="280" cy="280" rx="140" ry="85" transform="rotate(12 280 280)"/>
+      <ellipse class="tl" cx="280" cy="280" rx="80" ry="48" transform="rotate(12 280 280)"/>
+      <ellipse class="tl" cx="770" cy="720" rx="170" ry="105" transform="rotate(-10 770 720)"/>
+      <ellipse class="tl" cx="770" cy="720" rx="100" ry="60" transform="rotate(-10 770 720)"/>
+    </g>
+  </svg>
 </div>
 
 <!-- HERO -->
@@ -498,8 +649,12 @@
   </div>
 
   <div class="categories" id="categories">
-    <div class="cat-label">Or try a category</div>
+    <div class="cat-label">Quick Start</div>
     <div class="cat-grid" id="catGrid"></div>
+    <div class="chain-section" id="chainSection">
+      <div class="cat-label" style="margin-top:2rem">Comprehensive Reviews</div>
+      <div class="chain-grid" id="chainGrid"></div>
+    </div>
   </div>
 </section>
 
@@ -557,11 +712,29 @@ const CATEGORIES = [
 
 function renderCategories() {
   const grid = document.getElementById('catGrid');
+  const chainGrid = document.getElementById('chainGrid');
+
   CATEGORIES.forEach(cat => {
+    const isChain = !!cat.badge;
     const card = document.createElement('div');
-    card.className = 'cat-card';
-    const badge = cat.badge ? `<span class="cat-badge">${cat.badge}</span>` : '';
-    card.innerHTML = `<span class="cat-icon">${cat.icon}</span><div class="cat-name">${cat.name}${badge}</div><div class="cat-desc">${cat.desc}</div>`;
+
+    if (isChain) {
+      card.className = 'chain-card';
+      const steps = cat.desc.split('\u2192').map(s => s.trim());
+      const stepsHtml = steps.map((s, i) =>
+        i < steps.length - 1 ? `<span>${s}</span><span class="arrow">\u2192</span>` : `<span>${s}</span>`
+      ).join('');
+      card.innerHTML = `
+        <span class="cat-icon">${cat.icon}</span>
+        <div class="cat-name">${cat.name}</div>
+        <div class="cat-desc">${cat.desc}</div>
+        <div class="chain-steps">${stepsHtml}</div>
+      `;
+    } else {
+      card.className = 'cat-card';
+      card.innerHTML = `<span class="cat-icon">${cat.icon}</span><div class="cat-name">${cat.name}</div><div class="cat-desc">${cat.desc}</div>`;
+    }
+
     card.onclick = () => {
       document.getElementById('question').value = cat.question;
       if (cat.panel) {
@@ -573,7 +746,9 @@ function renderCategories() {
       autoResize(document.getElementById('question'));
       document.getElementById('question').focus();
     };
-    grid.appendChild(card);
+
+    if (isChain) chainGrid.appendChild(card);
+    else grid.appendChild(card);
   });
 }
 
