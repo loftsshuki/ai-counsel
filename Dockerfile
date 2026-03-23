@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Use slim requirements for web deployment (no heavy ML packages)
+COPY requirements-web.txt .
+RUN pip install --no-cache-dir -r requirements-web.txt
 
 # Copy application code
 COPY . .

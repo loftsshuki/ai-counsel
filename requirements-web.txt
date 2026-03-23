@@ -1,0 +1,9 @@
+# Slim requirements for web UI deployment (no heavy ML packages)
+mcp>=1.0.0
+pydantic>=2.5.0
+pyyaml>=6.0.1
+httpx>=0.27.0
+tenacity>=8.2.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-dotenv>=1.0.0
