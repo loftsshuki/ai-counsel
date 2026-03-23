@@ -88,6 +88,7 @@ class WebDeliberateRequest(BaseModel):
     user_feedback: Optional[str] = None  # What the user wants improved
     refinement_round: int = 0  # Which iteration (0 = first run)
     workflow: Optional[str] = None  # Workflow mode: brainstorm, red_team, etc.
+    private_mode: bool = False  # Skip transcript saving + decision graph storage
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -221,7 +222,21 @@ Address the user's feedback directly. Keep what worked, fix what didn't. Be spec
             async def run_deliberation():
                 """Run engine in background task, push final events to queue."""
                 try:
+                    # Private mode: temporarily disable transcript + decision graph
+                    saved_transcript_mgr = None
+                    saved_graph = None
+                    if request.private_mode and engine:
+                        saved_transcript_mgr = engine.transcript_manager
+                        saved_graph = engine.graph_integration
+                        engine.transcript_manager = None
+                        engine.graph_integration = None
+
                     result = await engine.execute(delib_request, on_event=on_event)
+
+                    # Restore after execution
+                    if request.private_mode and engine:
+                        engine.transcript_manager = saved_transcript_mgr
+                        engine.graph_integration = saved_graph
 
                     # Push summary (engine doesn't fire this via callback)
                     if result.summary:
