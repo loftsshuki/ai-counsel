@@ -167,14 +167,6 @@ async def deliberate_stream(request: WebDeliberateRequest):
                 yield _sse("error", {"message": f"Panel '{request.panel}' not found"})
                 return
 
-            yield _sse("status", {
-                "phase": "starting",
-                "question": request.question[:200],
-                "panel": request.panel,
-                "participants": [f"{p.model}@{p.cli}" for p in participants],
-                "rounds": rounds,
-            })
-
             # Build request
             delib_request = DeliberateRequest(
                 question=request.question,
@@ -184,55 +176,65 @@ async def deliberate_stream(request: WebDeliberateRequest):
                 working_directory=request.working_directory,
             )
 
-            # Execute deliberation
-            yield _sse("status", {"phase": "deliberating"})
+            # Use asyncio.Queue for true streaming — engine pushes events,
+            # SSE generator pulls them and sends to browser in real-time
+            event_queue: asyncio.Queue = asyncio.Queue()
 
-            result = await engine.execute(delib_request)
+            async def on_event(event_type: str, data: dict):
+                """Callback fired by engine as each model responds."""
+                await event_queue.put((event_type, data))
 
-            # Stream round responses
-            for resp in result.full_debate:
-                yield _sse("response", {
-                    "round": resp.round,
-                    "participant": resp.participant,
-                    "response": resp.response[:2000],  # Truncate for streaming
-                    "timestamp": resp.timestamp,
-                })
-                await asyncio.sleep(0.05)  # Small delay for visual effect
+            async def run_deliberation():
+                """Run engine in background task, push final events to queue."""
+                try:
+                    result = await engine.execute(delib_request, on_event=on_event)
 
-            # Stream convergence info
-            if result.convergence_info:
-                yield _sse("convergence", {
-                    "detected": result.convergence_info.detected,
-                    "status": result.convergence_info.status,
-                    "similarity": result.convergence_info.final_similarity,
-                })
+                    # Push summary (engine doesn't fire this via callback)
+                    if result.summary:
+                        await event_queue.put(("summary", {
+                            "consensus": result.summary.consensus,
+                            "key_agreements": result.summary.key_agreements,
+                            "key_disagreements": result.summary.key_disagreements,
+                            "recommendation": result.summary.final_recommendation,
+                            "executive_summary": result.summary.executive_summary,
+                        }))
 
-            # Stream summary
-            if result.summary:
-                yield _sse("summary", {
-                    "consensus": result.summary.consensus,
-                    "key_agreements": result.summary.key_agreements,
-                    "key_disagreements": result.summary.key_disagreements,
-                    "recommendation": result.summary.final_recommendation,
-                    "executive_summary": result.summary.executive_summary,
-                })
+                    # Push findings
+                    if result.structured_findings:
+                        sf = result.structured_findings
+                        await event_queue.put(("findings", {
+                            "verdict": sf.verdict,
+                            "risk_level": sf.risk_level,
+                            "findings_count": len(sf.findings),
+                            "findings": [f.model_dump() for f in sf.findings[:20]],
+                        }))
 
-            # Stream findings
-            if result.structured_findings:
-                sf = result.structured_findings
-                yield _sse("findings", {
-                    "verdict": sf.verdict,
-                    "risk_level": sf.risk_level,
-                    "findings_count": len(sf.findings),
-                    "findings": [f.model_dump() for f in sf.findings[:20]],
-                })
+                    # Push complete
+                    await event_queue.put(("complete", {
+                        "status": result.status,
+                        "rounds_completed": result.rounds_completed,
+                        "transcript_path": result.transcript_path,
+                    }))
+                except Exception as e:
+                    logger.error(f"Deliberation error: {e}", exc_info=True)
+                    await event_queue.put(("error", {"message": str(e)}))
+                finally:
+                    # Sentinel to signal stream end
+                    await event_queue.put(None)
 
-            # Complete
-            yield _sse("complete", {
-                "status": result.status,
-                "rounds_completed": result.rounds_completed,
-                "transcript_path": result.transcript_path,
-            })
+            # Start deliberation in background — don't await it
+            task = asyncio.create_task(run_deliberation())
+
+            # Yield events as they arrive from the engine
+            while True:
+                event = await event_queue.get()
+                if event is None:
+                    break  # Deliberation finished
+                event_type, data = event
+                yield _sse(event_type, data)
+
+            # Ensure task is done (should be, since it sent None)
+            await task
 
         except Exception as e:
             logger.error(f"Deliberation stream error: {e}", exc_info=True)

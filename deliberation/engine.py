@@ -5,7 +5,10 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Literal, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Literal, Optional, cast
+
+# Type for async event callbacks used by streaming web UI
+EventCallback = Optional[Callable[[str, dict], Coroutine[Any, Any, None]]]
 
 from pydantic import ValidationError
 
@@ -209,6 +212,7 @@ class DeliberationEngine:
         previous_responses: List[RoundResponse],
         graph_context: str = "",
         working_directory: str | None = None,
+        on_event: EventCallback = None,
     ) -> List[RoundResponse]:
         """
         Execute a single deliberation round.
@@ -386,19 +390,22 @@ The following files are available in the working directory:
                 )
                 return (participant, f"[ERROR: {type(e).__name__}: {str(e)}]")
 
-        # Run all participants in PARALLEL using asyncio.gather
+        # Run all participants in PARALLEL, streaming results as each completes
         logger.info(f"Round {round_num}: Invoking {len(participants)} participants in PARALLEL")
-        parallel_results = await asyncio.gather(
-            *[invoke_participant(p) for p in participants],
-            return_exceptions=True
-        )
-
-        # Process results and handle any exceptions from gather
+        tasks = {asyncio.create_task(invoke_participant(p)): p for p in participants}
         participant_responses: list[tuple[Participant, str]] = []
-        for i, result in enumerate(parallel_results):
+
+        for coro in asyncio.as_completed(tasks.keys()):
+            result = await coro
             if isinstance(result, Exception):
-                # Handle unexpected exceptions from gather itself
-                participant = participants[i]
+                # Find which participant this was for
+                participant = None
+                for task, p in tasks.items():
+                    if task.done() and task.exception() is not None:
+                        participant = p
+                        break
+                if participant is None:
+                    participant = participants[len(participant_responses)]
                 logger.error(f"Unexpected error for {participant.model}@{participant.cli}: {result}")
                 participant_responses.append((participant, f"[ERROR: {type(result).__name__}: {str(result)}]"))
             else:
@@ -471,6 +478,18 @@ The following files are available in the working directory:
             )
 
             responses.append(response)
+
+            # Fire streaming callback so web UI can show this response immediately
+            if on_event:
+                try:
+                    await on_event("response", {
+                        "round": response.round,
+                        "participant": response.participant,
+                        "response": response.response[:2000],
+                        "timestamp": response.timestamp,
+                    })
+                except Exception as cb_err:
+                    logger.warning(f"Event callback failed: {cb_err}")
 
         return responses
 
@@ -1079,7 +1098,7 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
 
         return False
 
-    async def execute(self, request: "DeliberateRequest") -> "DeliberationResult":
+    async def execute(self, request: "DeliberateRequest", on_event: EventCallback = None) -> "DeliberationResult":
         """
         Execute full deliberation with multiple rounds and optional convergence detection.
 
@@ -1120,6 +1139,18 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
         progress_logger.info(f"   Working Dir: {request.working_directory}")
         progress_logger.info("-" * 70)
 
+        # Fire starting event for streaming UI
+        if on_event:
+            try:
+                await on_event("status", {
+                    "phase": "starting",
+                    "question": request.question[:200],
+                    "participants": model_list,
+                    "rounds": request.rounds,
+                })
+            except Exception:
+                pass
+
         # Retrieve decision graph context if enabled
         graph_context = ""
         if self.graph_integration:
@@ -1159,6 +1190,17 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
             round_start = datetime.now()
             progress_logger.info(f"📍 ROUND {round_num}/{rounds_to_execute} START")
 
+            # Fire round_start event for streaming UI
+            if on_event:
+                try:
+                    await on_event("round_start", {
+                        "round": round_num,
+                        "total_rounds": rounds_to_execute,
+                        "participants": model_list,
+                    })
+                except Exception:
+                    pass
+
             try:
                 # Execute round with timeout protection (5 min per round max)
                 round_timeout = self.config.defaults.timeout_per_round if self.config and hasattr(self.config, 'defaults') and hasattr(self.config.defaults, 'timeout_per_round') else 300
@@ -1170,6 +1212,7 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                         previous_responses=all_responses,
                         graph_context=graph_context,
                         working_directory=request.working_directory,
+                        on_event=on_event,
                     ),
                     timeout=round_timeout
                 )
@@ -1253,6 +1296,18 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                     # Store convergence info for result
                     final_convergence_info = convergence_result
 
+                    # Fire convergence event for streaming UI
+                    if on_event:
+                        try:
+                            await on_event("convergence", {
+                                "detected": convergence_result.converged,
+                                "status": convergence_result.status,
+                                "similarity": convergence_result.final_similarity,
+                                "round": round_num,
+                            })
+                        except Exception:
+                            pass
+
                     # Stop if converged or impasse
                     if convergence_result.converged:
                         logger.info(
@@ -1273,6 +1328,13 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
             or (final_convergence_info and final_convergence_info.status == "impasse")
         )
         actual_rounds_completed = round_num if is_early_stop else rounds_to_execute
+
+        # Fire summary phase event
+        if on_event:
+            try:
+                await on_event("status", {"phase": "summarizing"})
+            except Exception:
+                pass
 
         # Generate AI-powered summary with fallback chain
         summary = None

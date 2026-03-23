@@ -663,18 +663,24 @@ function ev(t,d){
     }
     if(d.phase==='deliberating'){
       document.getElementById('sText').textContent='Models are deliberating...';
-      renderPhases('round 1');
+    }
+    if(d.phase==='summarizing'){
+      document.getElementById('sText').textContent='Generating executive summary...';
+      renderPhases('summary');
+      addActivity('\ud83d\udcdd','Generating executive summary...','summary');
+      document.getElementById('sProgress').style.width='90%';
     }
   }
 
-  if(t==='response'){
-    const prevRound=currentRound;
+  if(t==='round_start'){
     currentRound=d.round;
+    addActivity('\ud83d\udd04',`Round ${d.round} of ${d.total_rounds} started`,'info');
+    renderPhases('round '+d.round);
+    document.getElementById('sText').textContent=`Round ${d.round}: waiting for models...`;
+  }
+
+  if(t==='response'){
     responsesReceived++;
-    if(currentRound>prevRound){
-      addActivity('\ud83d\udd04',`Round ${currentRound} started`,'info');
-      renderPhases('round '+currentRound);
-    }
     const modelName=d.participant.split('@')[0]||d.participant;
     document.getElementById('sText').textContent=`Round ${d.round}: ${modelName} responded`;
     addActivity('\ud83e\udde0',`${modelName} responded (Round ${d.round})`,'model');
