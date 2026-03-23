@@ -419,6 +419,10 @@ model_registry:
       label: "Grok 4.20 Beta (OpenRouter)"
       tier: "flagship"
       enabled: true
+    - id: "x-ai/grok-4.20-multi-agent-beta"
+      label: "Grok 4.20 Multi-Agent Beta"
+      tier: "flagship"
+      enabled: true
     - id: "x-ai/grok-4"
       label: "Grok 4 (OpenRouter)"
       tier: "premium"
@@ -497,6 +501,32 @@ model_registry:
       label: "KAT-Coder-Pro V1 FREE (73.4% SWE-Bench)"
       tier: "free-fast"
       enabled: false  # Disabled - removed from OpenRouter as of 2026-03-14
+    # ===== NVIDIA =====
+    - id: "nvidia/nemotron-3-super:free"
+      label: "NVIDIA Nemotron 3 Super FREE"
+      tier: "free-fast"
+      enabled: true
+      input_cost: 0.0
+      output_cost: 0.0
+    # ===== Moonshot =====
+    - id: "moonshotai/kimi-k2.5"
+      label: "Kimi K2.5 (OpenRouter)"
+      tier: "premium"
+      enabled: true
+    # ===== DeepSeek =====
+    - id: "deepseek/deepseek-v3.2-speciale"
+      label: "DeepSeek V3.2 Speciale"
+      tier: "premium"
+      enabled: true
+    - id: "deepseek/deepseek-v3.2"
+      label: "DeepSeek V3.2"
+      tier: "balanced"
+      enabled: true
+    # ===== Perplexity =====
+    - id: "perplexity/sonar-pro-search"
+      label: "Perplexity Sonar Pro Search"
+      tier: "search"
+      enabled: true
     # ===== ULTRA-FAST CHEAP MODELS =====
     - id: "google/gemini-2.5-flash-preview-05-20"
       label: "Gemini 2.5 Flash Preview"
