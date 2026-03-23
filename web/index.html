@@ -1046,7 +1046,7 @@ async function loadPanels() {
   } catch(e) {}
 }
 
-// startDeliberation is defined in the model picker section below
+function startDeliberation() {} // Stub — overridden by model picker init below
 
 function handleEvent(type, data) {
   switch(type) {
@@ -1239,7 +1239,6 @@ function confirmModelSelection() {
 }
 
 // Update startDeliberation to pass custom models
-const _origStart = startDeliberation;
 startDeliberation = function() {
   const question = document.getElementById('question').value;
   const panel = document.getElementById('panel').value;
