@@ -83,6 +83,10 @@ class WebDeliberateRequest(BaseModel):
     rounds: int = 2
     working_directory: str = "."
     custom_models: Optional[list] = None  # For custom council mode
+    # Refinement loop fields
+    previous_result: Optional[str] = None  # Council's previous output
+    user_feedback: Optional[str] = None  # What the user wants improved
+    refinement_round: int = 0  # Which iteration (0 = first run)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -167,9 +171,28 @@ async def deliberate_stream(request: WebDeliberateRequest):
                 yield _sse("error", {"message": f"Panel '{request.panel}' not found"})
                 return
 
+            # Build question — inject refinement context if this is a follow-up
+            question = request.question
+            if request.previous_result and request.user_feedback:
+                question = f"""## Refinement Round {request.refinement_round}
+
+You previously answered this question and the user wants improvements.
+
+### Original Question
+{request.question}
+
+### Your Previous Answer
+{request.previous_result}
+
+### User Feedback — What They Want Changed
+{request.user_feedback}
+
+### Instructions
+Address the user's feedback directly. Keep what worked, fix what didn't. Be specific and actionable. This is refinement round {request.refinement_round} — the goal is 10/10."""
+
             # Build request
             delib_request = DeliberateRequest(
-                question=request.question,
+                question=question,
                 participants=participants,
                 rounds=rounds,
                 mode=mode,

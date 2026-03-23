@@ -431,6 +431,17 @@
   <div id="responses"></div>
   <!-- Summary section -->
   <div id="summaryArea" style="display:none"></div>
+  <!-- Refinement section — appears after results -->
+  <div id="refineArea" style="display:none;margin-top:2rem;border-top:2px solid var(--gold);padding-top:2rem">
+    <div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--cream);margin-bottom:.4rem">Not satisfied? Refine it.</div>
+    <div style="font-family:var(--fm);font-size:.75rem;color:var(--cream-muted);margin-bottom:1rem">Tell the council what to improve. They'll see their previous answer and your feedback, then try again.</div>
+    <div id="refineRound" style="font-family:var(--fm);font-size:.6rem;color:var(--gold);margin-bottom:.8rem"></div>
+    <textarea id="refineFeedback" placeholder="What didn't you like? What should they focus on? Be specific..." style="width:100%;min-height:80px;padding:.8rem 1rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--cream);font-family:var(--fm);font-size:.8rem;line-height:1.6;resize:vertical;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    <div style="display:flex;gap:.8rem;margin-top:.8rem;align-items:center">
+      <button id="refineBtn" onclick="refine()" style="padding:.6rem 1.5rem;border-radius:6px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-family:var(--fm);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em" onmouseenter="this.style.background='var(--gold)';this.style.color='var(--surface)'" onmouseleave="this.style.background='transparent';this.style.color='var(--gold)'">Refine Again</button>
+      <span id="refineCount" style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted)"></span>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -585,15 +596,14 @@ function updateModelBtn(){
 
 function closePicker(){document.getElementById('mpOverlay').style.display='none';}
 
-function go() {
-  const q=document.getElementById('question').value;
-  if(!q.trim())return;
+function resetDebateUI(){
   document.getElementById('statusStrip').style.display='block';
   document.getElementById('debate').style.display='block';
   document.getElementById('activityLog').innerHTML='';
   document.getElementById('responses').innerHTML='';
   document.getElementById('summaryArea').style.display='none';
   document.getElementById('summaryArea').innerHTML='';
+  document.getElementById('refineArea').style.display='none';
   document.getElementById('sProgress').style.width='0%';
   document.getElementById('sProgress').style.background='var(--green)';
   document.getElementById('sSpinner').style.animation='spin .8s linear infinite';
@@ -601,14 +611,48 @@ function go() {
   document.getElementById('sSpinner').style.borderTopColor='var(--green)';
   document.getElementById('goBtn').disabled=true;
   document.getElementById('sText').textContent='Assembling council...';
+  allResponseTexts=[];
   renderPhases('starting');
+}
 
-  fetch('/api/deliberate/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,panel:document.getElementById('panel').value,rounds:2,working_directory:'.',custom_models:selModels.length>=2?selModels:null})}).then(r=>{
+function sendDeliberation(body){
+  fetch('/api/deliberate/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{
     const rd=r.body.getReader();const dc=new TextDecoder();let buf='';
     function read(){rd.read().then(({done,value})=>{if(done){fin();return;}buf+=dc.decode(value,{stream:true});const evts=buf.split('\n\n');buf=evts.pop();for(const bl of evts){const ls=bl.split('\n');let t='',d='';for(const l of ls){if(l.startsWith('event: '))t=l.slice(7);else if(l.startsWith('data: '))d=l.slice(6);}if(t&&d)try{ev(t,JSON.parse(d));}catch(e){}}read();});}read();
   }).catch(()=>fin());
 }
+
+function go() {
+  const q=document.getElementById('question').value;
+  if(!q.trim())return;
+  originalQuestion=q;
+  refinementCount=0;
+  lastResultText='';
+  resetDebateUI();
+
+  sendDeliberation({question:q,panel:document.getElementById('panel').value,rounds:2,working_directory:'.',custom_models:selModels.length>=2?selModels:null});}
+
+function refine(){
+  const feedback=document.getElementById('refineFeedback').value;
+  if(!feedback.trim())return;
+  refinementCount++;
+  resetDebateUI();
+  addActivity('\ud83d\udd04',`Refinement round ${refinementCount} — user feedback provided`,'convergence');
+
+  sendDeliberation({
+    question:originalQuestion,
+    panel:document.getElementById('panel').value,
+    rounds:2,
+    working_directory:'.',
+    custom_models:selModels.length>=2?selModels:null,
+    previous_result:lastResultText.substring(0,4000),
+    user_feedback:feedback,
+    refinement_round:refinementCount
+  });
+}
+
 let startTime=0;let timerInterval=null;let totalParticipants=0;let responsesReceived=0;let currentRound=0;let totalRounds=2;
+let originalQuestion='';let lastResultText='';let refinementCount=0;let allResponseTexts=[];
 
 function startTimer(){
   startTime=Date.now();
@@ -681,6 +725,7 @@ function ev(t,d){
 
   if(t==='response'){
     responsesReceived++;
+    allResponseTexts.push(`[${d.participant}] ${d.response}`);
     const modelName=d.participant.split('@')[0]||d.participant;
     document.getElementById('sText').textContent=`Round ${d.round}: ${modelName} responded`;
     addActivity('\ud83e\udde0',`${modelName} responded (Round ${d.round})`,'model');
@@ -735,6 +780,16 @@ function ev(t,d){
     document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s`;
     addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)`,'info');
     renderPhases('summary');
+    // Save last result for refinement
+    lastResultText=allResponseTexts.join('\n\n');
+    // Show refine area
+    const ra=document.getElementById('refineArea');
+    ra.style.display='block';
+    ra.style.opacity='0';ra.style.transform='translateY(10px)';
+    requestAnimationFrame(()=>{ra.style.transition='opacity .4s,transform .4s';ra.style.opacity='1';ra.style.transform='translateY(0)';});
+    document.getElementById('refineRound').textContent=refinementCount>0?`Refinement round ${refinementCount}`:'First run — refine to improve';
+    document.getElementById('refineCount').textContent=refinementCount>0?`${refinementCount} refinement${refinementCount>1?'s':''} so far`:'';
+    document.getElementById('refineFeedback').value='';
     fin();
   }
 
