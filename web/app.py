@@ -305,6 +305,134 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
 
 
+# ===== E2E Encrypted Sharing =====
+# Server stores ONLY encrypted blobs. Decryption key never touches server.
+# Key lives in URL hash (#fragment) which browsers don't send to servers.
+
+import secrets
+import time
+
+# In-memory store with TTL. Production would use Redis.
+_shares: dict[str, dict] = {}
+_SHARE_MAX_SIZE = 2 * 1024 * 1024  # 2MB max encrypted payload
+_SHARE_TTL = 86400  # 24 hours
+
+
+def _cleanup_expired_shares():
+    """Remove expired shares."""
+    now = time.time()
+    expired = [k for k, v in _shares.items() if now > v["expires_at"]]
+    for k in expired:
+        del _shares[k]
+
+
+class ShareRequest(BaseModel):
+    data: str  # Base64url-encoded encrypted ciphertext
+    iv: str  # Base64url-encoded initialization vector
+    expires: str = "24h"  # TTL
+
+
+@app.post("/api/share")
+async def create_share(req: ShareRequest):
+    """Store an encrypted blob. Server never sees the decryption key."""
+    _cleanup_expired_shares()
+
+    # Size check (base64 is ~1.33x the binary size)
+    if len(req.data) > _SHARE_MAX_SIZE:
+        raise HTTPException(status_code=413, detail="Payload too large (max 2MB)")
+
+    # Rate limit: max 100 active shares
+    if len(_shares) > 100:
+        raise HTTPException(status_code=429, detail="Too many active shares")
+
+    share_id = secrets.token_urlsafe(16)
+    _shares[share_id] = {
+        "data": req.data,
+        "iv": req.iv,
+        "created_at": time.time(),
+        "expires_at": time.time() + _SHARE_TTL,
+    }
+
+    logger.info(f"E2E share created: {share_id} (expires in 24h)")
+    return {"id": share_id}
+
+
+@app.get("/api/share/{share_id}")
+async def get_share(share_id: str):
+    """Retrieve an encrypted blob. Client decrypts with key from URL hash."""
+    _cleanup_expired_shares()
+
+    if share_id not in _shares:
+        raise HTTPException(status_code=404, detail="Share not found or expired")
+
+    share = _shares[share_id]
+    return {"data": share["data"], "iv": share["iv"]}
+
+
+@app.get("/shared/{share_id}", response_class=HTMLResponse)
+async def shared_view(share_id: str):
+    """Serve the decryption page. Key comes from URL hash (never sent to server)."""
+    return HTMLResponse(content=f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Counsel — Encrypted Share</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {{ --bg:oklch(96.5% 0.008 85); --surface:oklch(99% 0.003 85); --border:oklch(87% 0.01 85); --green:oklch(38% 0.12 155); --cream:oklch(18% 0.025 155); --fm:'JetBrains Mono',monospace; --fb:'Outfit',system-ui,sans-serif; }}
+  * {{ margin:0;padding:0;box-sizing:border-box }}
+  body {{ font-family:var(--fb);background:var(--bg);color:var(--cream);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem }}
+  .card {{ background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:2rem;max-width:800px;width:100% }}
+  h1 {{ font-size:1.3rem;font-weight:600;margin-bottom:.5rem }}
+  .badge {{ display:inline-flex;align-items:center;gap:.3rem;font-family:var(--fm);font-size:.7rem;padding:.25rem .6rem;border-radius:4px;background:oklch(45% 0.12 155 / 0.12);color:var(--green);border:1px solid oklch(45% 0.12 155 / 0.25);margin-bottom:1.5rem }}
+  #content {{ font-family:var(--fm);font-size:.85rem;line-height:1.8;white-space:pre-wrap;max-height:70vh;overflow-y:auto;padding:1rem;background:var(--bg);border-radius:6px;border:1px solid var(--border) }}
+  #status {{ font-family:var(--fm);font-size:.85rem;color:oklch(50% 0.02 155);text-align:center;padding:2rem }}
+  .actions {{ display:flex;gap:.5rem;margin-top:1rem }}
+  .actions button {{ background:var(--green);color:oklch(97% .01 85);border:none;border-radius:5px;padding:.5rem 1rem;font-family:var(--fb);font-size:.85rem;font-weight:500;cursor:pointer }}
+</style>
+</head><body>
+<div class="card">
+  <h1>AI Counsel Deliberation</h1>
+  <div class="badge">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    End-to-end encrypted
+  </div>
+  <div id="status">Decrypting...</div>
+  <div id="content" style="display:none"></div>
+  <div id="acts" class="actions" style="display:none">
+    <button onclick="navigator.clipboard.writeText(document.getElementById('content').textContent).then(()=>this.textContent='Copied!')">Copy All</button>
+    <button onclick="let b=new Blob([document.getElementById('content').textContent],{{type:'text/markdown'}});let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='deliberation.md';a.click()">Download .md</button>
+  </div>
+</div>
+<script>
+(async()=>{{
+  const keyB64=location.hash.slice(1);
+  if(!keyB64){{ document.getElementById('status').textContent='No decryption key in URL. The link may be incomplete.';return }}
+  try{{
+    // Fetch encrypted data
+    const r=await fetch('/api/share/{share_id}');
+    if(!r.ok){{ document.getElementById('status').textContent='Share not found or expired (24h limit).';return }}
+    const {{data,iv}}=await r.json();
+    // Decode base64url
+    const b64d=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+    const keyRaw=b64d(keyB64);
+    const ivRaw=b64d(iv);
+    const cipherRaw=b64d(data);
+    // Import key and decrypt
+    const key=await crypto.subtle.importKey('raw',keyRaw,{{name:'AES-GCM'}},false,['decrypt']);
+    const plain=await crypto.subtle.decrypt({{name:'AES-GCM',iv:ivRaw}},key,cipherRaw);
+    const text=new TextDecoder().decode(plain);
+    document.getElementById('status').style.display='none';
+    document.getElementById('content').style.display='block';
+    document.getElementById('content').textContent=text;
+    document.getElementById('acts').style.display='flex';
+  }}catch(e){{
+    document.getElementById('status').textContent='Decryption failed. The key may be wrong or the data corrupted.';
+  }}
+}})();
+</script>
+</body></html>""")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("web.app:app", host="0.0.0.0", port=8080, reload=True)
