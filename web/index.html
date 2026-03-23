@@ -62,9 +62,9 @@
 
   /* HERO */
   .hero {
-    min-height:85vh; display:flex; flex-direction:column;
+    min-height:65vh; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center;
-    padding:6rem 2rem 2.5rem; position:relative; overflow:hidden;
+    padding:5rem 2rem 2rem; position:relative; overflow:hidden;
   }
   .hero-bg {
     position:absolute; inset:0; z-index:0;
@@ -76,7 +76,7 @@
       repeating-linear-gradient(0deg, transparent, transparent 79px, oklch(38% 0.08 155 / 0.08) 79px, oklch(38% 0.08 155 / 0.08) 80px),
       repeating-linear-gradient(90deg, transparent, transparent 79px, oklch(38% 0.08 155 / 0.08) 79px, oklch(38% 0.08 155 / 0.08) 80px);
   }
-  .hero-content { position:relative; z-index:2; max-width:680px; }
+  .hero-content { position:relative; z-index:2; max-width:780px; width:100%; }
   .hero-tag {
     font-family:var(--fm); font-size:0.6rem; font-weight:500;
     letter-spacing:0.25em; text-transform:uppercase; color:var(--green);
@@ -99,13 +99,13 @@
 
   /* SEARCH */
   .search {
-    width:100%; max-width:600px;
+    width:100%; max-width:780px;
     opacity:0; animation:up 700ms 800ms var(--ease) forwards;
   }
   .search-box {
     background:var(--surface); border:1px solid var(--border);
-    border-radius:6px; padding:1rem 1.25rem; padding-bottom:3.5rem;
-    position:relative; transition:border-color 300ms, box-shadow 300ms;
+    border-radius:8px; padding:1.2rem 1.5rem 1rem;
+    transition:border-color 300ms, box-shadow 300ms;
   }
   .search-box:focus-within {
     border-color:var(--green-dim);
@@ -113,40 +113,42 @@
   }
   .search-textarea {
     width:100%; background:transparent; border:none; outline:none;
-    color:var(--cream); font-family:var(--fb); font-size:1rem;
-    line-height:1.6; resize:none; min-height:28px;
+    color:var(--cream); font-family:var(--fb); font-size:1.05rem;
+    line-height:1.6; resize:none; min-height:32px;
   }
   .search-textarea::placeholder { color:var(--cream-muted); }
   .search-bottom {
-    position:absolute; bottom:0.75rem; left:1.25rem; right:1.25rem;
     display:flex; align-items:center; justify-content:space-between;
+    margin-top:0.8rem; padding-top:0.8rem;
+    border-top:1px solid var(--border);
+    flex-wrap:wrap; gap:0.5rem;
   }
-  .search-left { display:flex; align-items:center; gap:0.5rem; }
+  .search-left { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
   .s-select {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:4px; color:oklch(35% 0.02 155); font-family:var(--fm);
-    font-size:0.65rem; padding:0.3rem 0.5rem; cursor:pointer;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:5px; color:oklch(35% 0.02 155); font-family:var(--fm);
+    font-size:0.7rem; padding:0.4rem 0.6rem; cursor:pointer;
     appearance:auto; outline:none;
   }
   .s-models-btn {
-    background:transparent; border:1px solid var(--border); border-radius:4px;
-    color:oklch(40% 0.02 155); font-family:var(--fm); font-size:0.6rem;
-    padding:0.3rem 0.5rem; cursor:pointer; letter-spacing:0.05em;
-    transition:border-color 200ms, color 200ms;
+    background:var(--surface2); border:1px solid var(--border); border-radius:5px;
+    color:oklch(35% 0.02 155); font-family:var(--fm); font-size:0.7rem;
+    padding:0.4rem 0.6rem; cursor:pointer; letter-spacing:0.05em;
+    transition:border-color 200ms, color 200ms, background 200ms;
   }
-  .s-models-btn:hover { border-color:var(--green); color:oklch(30% 0.05 155); }
+  .s-models-btn:hover { border-color:var(--green); color:oklch(30% 0.05 155); background:oklch(94% 0.015 155); }
   .s-go {
     background:var(--green); color:oklch(97% .01 85); border:none;
-    border-radius:4px; padding:0.4rem 1.2rem; font-family:var(--fb);
-    font-size:0.8rem; font-weight:600; cursor:pointer;
-    transition:background 200ms;
+    border-radius:5px; padding:0.45rem 1.4rem; font-family:var(--fb);
+    font-size:0.85rem; font-weight:600; cursor:pointer;
+    transition:background 200ms; white-space:nowrap;
   }
   .s-go:hover { background:oklch(45% 0.13 155); }
   .s-go:disabled { opacity:0.3; cursor:not-allowed; }
 
   /* SECTION HEADERS */
   .section {
-    padding:3.5rem 3rem 3rem;
+    padding:2.5rem 3rem 2rem;
     max-width:1200px; margin:0 auto;
   }
   .section-tag {
@@ -295,7 +297,9 @@
     .section { padding:3rem 1.5rem 2rem; }
     .dest-grid.two,.dest-grid.three,.dest-grid.featured { grid-template-columns:1fr; }
     .refine-hero-card { grid-template-columns:1fr; padding:2rem 1.5rem; min-height:auto; }
-    .hero { padding:5rem 1.5rem 3rem; }
+    .hero { padding:4rem 1.5rem 2rem; min-height:auto; }
+    .search-left { gap:0.4rem; }
+    .search-bottom { gap:0.4rem; }
   }
 </style>
 </head>
@@ -328,9 +332,9 @@
               <option value="deliberate">Deliberate</option>
             </select>
             <button class="s-models-btn" id="modelsBtn" onclick="openPicker()">Models</button>
-            <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted);user-select:none" title="Private Mode: Nothing saved to server. Responses exist only in your browser.">
-              <input type="checkbox" id="privateMode" style="accent-color:var(--green);width:14px;height:14px;cursor:pointer">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-family:var(--fm);font-size:.7rem;color:oklch(35% 0.02 155);user-select:none;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:5px;background:var(--surface2);transition:border-color 200ms" title="Private Mode: Nothing saved to server. Responses exist only in your browser.">
+              <input type="checkbox" id="privateMode" style="accent-color:var(--green);width:13px;height:13px;cursor:pointer;margin:0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               Private
             </label>
           </div>
