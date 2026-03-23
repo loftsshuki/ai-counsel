@@ -412,18 +412,18 @@
 </div>
 
 <!-- STATUS BAR (fixed bottom) -->
-<div id="statusStrip" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;background:var(--surface);border-top:1px solid var(--border);padding:0">
+<div id="statusStrip" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;background:var(--surface);border-top:2px solid var(--border);padding:0;box-shadow:0 -4px 20px oklch(0% 0 0 / 0.08)">
   <!-- Progress bar -->
-  <div id="sProgress" style="height:3px;background:var(--green);width:0%;transition:width 600ms ease;border-radius:0 2px 0 0"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 2rem">
-    <div style="display:flex;align-items:center;gap:.8rem">
-      <div id="sSpinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite"></div>
-      <span id="sText" style="font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">Deliberating...</span>
+  <div id="sProgress" style="height:6px;background:linear-gradient(90deg, var(--green), var(--gold));width:0%;transition:width 600ms ease;border-radius:0 3px 0 0"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1.2rem 3rem">
+    <div style="display:flex;align-items:center;gap:1.2rem">
+      <div id="sSpinner" style="width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite"></div>
+      <span id="sText" style="font-family:var(--fm);font-size:1rem;color:var(--cream);font-weight:500">Deliberating...</span>
     </div>
-    <div id="sPhase" style="display:flex;gap:.4rem;font-family:var(--fm);font-size:.55rem"></div>
-    <div style="display:flex;align-items:center;gap:1rem">
-      <div id="sCost" style="font-family:var(--fm);font-size:.6rem;color:var(--gold);font-variant-numeric:tabular-nums;display:none">$0.000</div>
-      <div id="sTimer" style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted);font-variant-numeric:tabular-nums">0:00</div>
+    <div id="sPhase" style="display:flex;gap:.6rem;font-family:var(--fm);font-size:.85rem"></div>
+    <div style="display:flex;align-items:center;gap:1.5rem">
+      <div id="sCost" style="font-family:var(--fm);font-size:1rem;color:var(--gold);font-weight:500;font-variant-numeric:tabular-nums;display:none">$0.000</div>
+      <div id="sTimer" style="font-family:var(--fm);font-size:1rem;color:var(--cream-dim);font-weight:500;font-variant-numeric:tabular-nums">0:00</div>
     </div>
   </div>
 </div>
@@ -672,7 +672,7 @@ function refine(){
 }
 
 let startTime=0;let timerInterval=null;let totalParticipants=0;let responsesReceived=0;let currentRound=0;let totalRounds=2;
-let originalQuestion='';let lastResultText='';let refinementCount=0;let allResponseTexts=[];
+let originalQuestion='';let lastResultText='';let refinementCount=0;let allResponseTexts=[];let deliberationModels=[];
 let runningCost=0;let modelPricing={}; // {adapter/model_id: {input_cost, output_cost}}
 
 function startTimer(){
@@ -719,8 +719,10 @@ function ev(t,d){
       totalParticipants=d.participants?d.participants.length:0;
       totalRounds=d.rounds||2;
       responsesReceived=0;currentRound=0;
+      deliberationModels=d.participants?d.participants.map(p=>p.split('@')[0]):[];
+      deliberationData={question:originalQuestion,responses:[],summary:null,workflow:document.getElementById('workflowSelect')?document.getElementById('workflowSelect').value:'deliberate',models:deliberationModels,rounds:totalRounds,cost:0,elapsed:0};
       startTimer();
-      const names=d.participants?d.participants.map(p=>p.split('@')[0]).join(', '):'';
+      const names=deliberationModels.join(', ');
       document.getElementById('sText').textContent=`Council assembling: ${totalParticipants} models, ${totalRounds} rounds`;
       addActivity('\u2694\ufe0f',`Council convened: ${names}`,'info');
       addActivity('\u2753',`Question: "${d.question}"`,'info');
@@ -762,6 +764,7 @@ function ev(t,d){
       }
     }
     const modelName=d.participant.split('@')[0]||d.participant;
+    deliberationData.responses.push({round:d.round,model:modelName,text:d.response,timestamp:d.timestamp});
     document.getElementById('sText').textContent=`Round ${d.round}: ${modelName} responded`;
     addActivity('\ud83e\udde0',`${modelName} responded (Round ${d.round})`,'model');
     updateProgress();
@@ -769,8 +772,15 @@ function ev(t,d){
     // Render response card
     const s=document.getElementById('responses');
     const e=document.createElement('div');
-    e.style.cssText='margin-bottom:2rem;opacity:0;transform:translateY(10px);animation:up 400ms cubic-bezier(.16,1,.3,1) forwards;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;';
-    e.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem"><div style="font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--cream)">${esc(modelName)}</div><div style="display:flex;gap:.4rem"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">Round ${d.round}</span></div></div><div style="font-family:var(--fm);font-size:.8rem;line-height:1.8;color:var(--cream-dim);white-space:pre-wrap;max-height:400px;overflow-y:auto">${esc(d.response)}</div>`;
+    const rId='resp-'+Math.random().toString(36).slice(2,8);
+    e.style.cssText='margin-bottom:2rem;opacity:0;transform:translateY(10px);animation:up 400ms cubic-bezier(.16,1,.3,1) forwards;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;position:relative;';
+    e.onmouseenter=()=>{e.querySelectorAll('.exp-btn').forEach(b=>b.style.opacity='1')};
+    e.onmouseleave=()=>{e.querySelectorAll('.exp-btn').forEach(b=>b.style.opacity='0')};
+    const cardExport=`<div style="position:absolute;top:.5rem;right:.5rem;display:flex;gap:.3rem">
+      <button class="exp-btn" onclick="navigator.clipboard.writeText(document.getElementById('${rId}').textContent).then(()=>this.textContent='Copied!',setTimeout(()=>this.textContent='Copy',1500))" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">Copy</button>
+      <button class="exp-btn" onclick="exportFile('# ${esc(modelName)} — Round ${d.round}\\n\\n'+document.getElementById('${rId}').textContent,'${modelName.replace(/[^a-z0-9]/gi,'_')}_r${d.round}.md','text/markdown')" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">.md</button>
+    </div>`;
+    e.innerHTML=`${cardExport}<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem"><div style="font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--cream)">${esc(modelName)}</div><div style="display:flex;gap:.4rem"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">Round ${d.round}</span></div></div><div id="${rId}" style="font-family:var(--fm);font-size:.8rem;line-height:1.8;color:var(--cream-dim);white-space:pre-wrap;max-height:400px;overflow-y:auto">${esc(d.response)}</div>`;
     s.appendChild(e);
     e.scrollIntoView({behavior:'smooth',block:'end'});
   }
@@ -789,6 +799,7 @@ function ev(t,d){
     addActivity('\ud83d\udcdd','Executive summary generated','summary');
     document.getElementById('sProgress').style.width='95%';
 
+    deliberationData.summary=d;
     const area=document.getElementById('summaryArea');
     area.style.display='block';
     area.innerHTML=`
@@ -816,8 +827,22 @@ function ev(t,d){
     document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s${costStr}`;
     addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)${costStr?` — Est. cost: ${costStr.trim().replace(' \u00b7 ','')}`:''}`,  'info');
     renderPhases('summary');
-    // Save last result for refinement
+    // Save data for export
+    deliberationData.cost=runningCost;
+    deliberationData.elapsed=Math.floor((Date.now()-startTime)/1000);
+    deliberationData.rounds=d.rounds_completed;
     lastResultText=allResponseTexts.join('\n\n');
+
+    // Show export bar
+    const expBar=document.createElement('div');
+    expBar.style.cssText='display:flex;align-items:center;gap:.8rem;margin:1.5rem 0;padding:1rem 1.2rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;opacity:0;transform:translateY(10px);animation:up 400ms ease forwards';
+    expBar.innerHTML=`<span style="font-family:var(--fm);font-size:.75rem;color:var(--cream-muted);margin-right:auto">Export full deliberation:</span>
+      <button onclick="exportFile(buildMarkdown(),'deliberation.md','text/markdown')" style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--green-dim)'">.md</button>
+      <button onclick="exportFile(buildHTML(),'deliberation.html','text/html')" style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--green-dim)'">.html</button>
+      <button onclick="exportFile(buildJSON(),'deliberation.json','application/json')" style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--green-dim)'">.json</button>
+      <button onclick="navigator.clipboard.writeText(buildMarkdown()).then(()=>this.textContent='Copied!')" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:var(--cream-muted);transition:all .15s">Copy All</button>`;
+    document.getElementById('responses').appendChild(expBar);
+
     // Show refine area
     const ra=document.getElementById('refineArea');
     ra.style.display='block';
@@ -839,7 +864,46 @@ function ev(t,d){
   }
 }
 function fin(){document.getElementById('goBtn').disabled=false;}
+
+// Export functions
+let deliberationData={question:'',responses:[],summary:null,workflow:'',models:[],rounds:0,cost:0,elapsed:0};
+function buildMarkdown(){
+  let md=`# AI Counsel Deliberation\n\n`;
+  md+=`**Question:** ${deliberationData.question}\n`;
+  md+=`**Workflow:** ${deliberationData.workflow||'deliberate'}\n`;
+  md+=`**Models:** ${deliberationData.models.join(', ')}\n`;
+  md+=`**Rounds:** ${deliberationData.rounds}\n`;
+  if(deliberationData.cost>0)md+=`**Estimated Cost:** $${deliberationData.cost.toFixed(4)}\n`;
+  md+=`**Duration:** ${deliberationData.elapsed}s\n\n---\n\n`;
+  let curRound=0;
+  deliberationData.responses.forEach(r=>{
+    if(r.round!==curRound){curRound=r.round;md+=`## Round ${curRound}\n\n`}
+    md+=`### ${r.model}\n\n${r.text}\n\n`;
+  });
+  if(deliberationData.summary){
+    const s=deliberationData.summary;
+    md+=`---\n\n## Council Verdict\n\n`;
+    if(s.executive_summary)md+=`${s.executive_summary}\n\n`;
+    if(s.recommendation)md+=`**Recommendation:** ${s.recommendation}\n\n`;
+    if(s.key_agreements&&s.key_agreements.length){md+=`### Agreements\n\n`;s.key_agreements.forEach(a=>md+=`- ${a}\n`);md+='\n'}
+    if(s.key_disagreements&&s.key_disagreements.length){md+=`### Disagreements\n\n`;s.key_disagreements.forEach(a=>md+=`- ${a}\n`);md+='\n'}
+  }
+  return md;
+}
+function buildHTML(){
+  const md=buildMarkdown();
+  // Simple markdown to HTML
+  let html=md.replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/---/g,'<hr>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>AI Counsel - Deliberation</title><style>body{font-family:system-ui;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.7;color:#1a1a1a}h1{color:#2d5a3d;border-bottom:2px solid #2d5a3d;padding-bottom:.5rem}h2{color:#2d5a3d;margin-top:2rem}h3{color:#555;margin-top:1.5rem}hr{border:none;border-top:1px solid #ddd;margin:2rem 0}li{margin:.3rem 0}code{background:#f5f5f5;padding:.1rem .3rem;border-radius:3px}</style></head><body><p>${html}</p></body></html>`;
+}
+function buildJSON(){return JSON.stringify(deliberationData,null,2)}
+function exportFile(content,filename,type){
+  const blob=new Blob([content],{type});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
 function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+function copyBtn(targetId){return `<button onclick="copyText('${targetId}')" style="opacity:0;transition:opacity .15s;position:absolute;top:.6rem;right:.6rem;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.35rem .7rem;cursor:pointer;font-family:var(--fm);font-size:.7rem;color:var(--cream-muted);display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='var(--green)';this.style.color='oklch(95% .01 85)';this.style.borderColor='var(--green)'" onmouseout="this.style.background='var(--surface2)';this.style.color='var(--cream-muted)';this.style.borderColor='var(--border)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>`}
+function copyText(id){const el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.textContent).then(()=>{const btns=el.parentElement.querySelectorAll('button');btns.forEach(b=>{if(b.textContent.includes('Copy')){b.innerHTML=b.innerHTML.replace('Copy','Copied!');setTimeout(()=>b.innerHTML=b.innerHTML.replace('Copied!','Copy'),1500)}})})}
 
 async function loadWorkflows(){
   try{

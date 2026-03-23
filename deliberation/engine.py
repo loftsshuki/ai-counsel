@@ -96,9 +96,11 @@ class DeliberationEngine:
 
         summarizer_preferences = [
             ("claude", "sonnet", "Claude Sonnet"),
+            ("openrouter", "anthropic/claude-sonnet-4", "Claude Sonnet (OpenRouter)"),
             ("droid", "claude-sonnet-4-5-20250929", "Droid with Claude Sonnet"),
             ("codex", "gpt-5-codex", "GPT-5 Codex"),
             ("gemini", "gemini-2.5-pro", "Gemini 2.5 Pro"),
+            ("nebius", "deepseek-ai/DeepSeek-V3-0324", "DeepSeek V3 (Nebius)"),
         ]
 
         for cli_name, model_name, display_name in summarizer_preferences:
