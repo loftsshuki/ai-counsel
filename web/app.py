@@ -9,13 +9,13 @@ import asyncio
 import json
 import logging
 import sys
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # Add parent to path for imports
@@ -28,25 +28,15 @@ from deliberation.engine import DeliberationEngine
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AI Counsel", description="Multi-model deliberation with live streaming")
-
 # Global state
 engine: Optional[DeliberationEngine] = None
 config = None
 panels_config = {}
 
 
-class WebDeliberateRequest(BaseModel):
-    """Simplified request model for the web UI."""
-    question: str
-    panel: Optional[str] = "quick-check"
-    rounds: int = 2
-    working_directory: str = "."
-
-
-@app.on_event("startup")
-async def startup():
-    """Initialize engine on startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize engine on startup, cleanup on shutdown."""
     global engine, config, panels_config
 
     project_dir = Path(__file__).parent.parent
@@ -77,6 +67,21 @@ async def startup():
 
     engine = DeliberationEngine(adapters, config=config, server_dir=project_dir)
     logger.info(f"Web UI initialized with {len(adapters)} adapters")
+
+    yield  # App runs here
+
+    logger.info("Web UI shutting down")
+
+
+app = FastAPI(title="AI Counsel", description="Multi-model deliberation with live streaming", lifespan=lifespan)
+
+
+class WebDeliberateRequest(BaseModel):
+    """Simplified request model for the web UI."""
+    question: str
+    panel: Optional[str] = "quick-check"
+    rounds: int = 2
+    working_directory: str = "."
 
 
 @app.get("/", response_class=HTMLResponse)
