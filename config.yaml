@@ -205,23 +205,32 @@ defaults:
 
 model_registry:
   claude:
+    # Claude CLI — subscription-based, no per-token cost
     - id: "opus"
       label: "Claude Opus 4.6"
       tier: "premium"
       default: true
       enabled: true
+      input_cost: 0
+      output_cost: 0
     - id: "claude-opus-4-5-20251101"
       label: "Claude Opus 4.5"
       tier: "premium"
       enabled: true
+      input_cost: 0
+      output_cost: 0
     - id: "claude-sonnet-4-5-20250929"
       label: "Claude Sonnet 4.5"
       tier: "balanced"
       enabled: true
+      input_cost: 0
+      output_cost: 0
     - id: "claude-haiku-4-5-20251001"
       label: "Claude Haiku 4.5"
       tier: "speed"
       enabled: true
+      input_cost: 0
+      output_cost: 0
     - id: "claude-opus-4-1-20250805"
       label: "Claude Opus 4.1"
       tier: "premium"
@@ -307,38 +316,56 @@ model_registry:
       tier: "flagship"
       default: true
       enabled: true
+      input_cost: 15.0
+      output_cost: 75.0
     - id: "anthropic/claude-sonnet-4.6"
       label: "Claude Sonnet 4.6 (OpenRouter)"
       tier: "premium"
       enabled: true
+      input_cost: 3.0
+      output_cost: 15.0
     - id: "anthropic/claude-sonnet-4"
       label: "Claude Sonnet 4 (OpenRouter)"
       tier: "balanced"
       enabled: true
+      input_cost: 3.0
+      output_cost: 15.0
     - id: "anthropic/claude-3.5-sonnet"
       label: "Claude 3.5 Sonnet (OpenRouter)"
       tier: "balanced"
       enabled: false
+      input_cost: 3.0
+      output_cost: 15.0
     - id: "openai/gpt-4o"
       label: "GPT-4o (OpenRouter)"
       tier: "balanced"
       enabled: true
+      input_cost: 2.5
+      output_cost: 10.0
     - id: "openai/gpt-4o-mini"
       label: "GPT-4o Mini (OpenRouter)"
       tier: "speed"
       enabled: true
+      input_cost: 0.15
+      output_cost: 0.6
     - id: "google/gemini-2.0-flash-001"
       label: "Gemini 2.0 Flash (OpenRouter)"
       tier: "speed"
       enabled: true
+      input_cost: 0.1
+      output_cost: 0.4
     - id: "meta-llama/llama-3.3-70b-instruct"
       label: "Llama 3.3 70B (OpenRouter)"
       tier: "general"
       enabled: true
+      input_cost: 0.4
+      output_cost: 0.4
     - id: "deepseek/deepseek-r1"
       label: "DeepSeek R1 (OpenRouter)"
       tier: "reasoning"
       enabled: true
+      input_cost: 0.55
+      output_cost: 2.19
     - id: "qwen/qwen3.5-397b-a17b"
       label: "Qwen 3.5 397B (OpenRouter)"
       tier: "flagship"
@@ -364,6 +391,8 @@ model_registry:
       label: "GPT-5.4 (OpenRouter)"
       tier: "flagship"
       enabled: true
+      input_cost: 10.0
+      output_cost: 30.0
     # ===== Google Gemini Models =====
     - id: "google/gemini-3.1-pro-preview"
       label: "Gemini 3.1 Pro Preview (OpenRouter)"

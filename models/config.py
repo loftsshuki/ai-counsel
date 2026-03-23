@@ -153,6 +153,13 @@ class ModelDefinition(BaseModel):
     note: Optional[str] = Field(
         None, description="Optional additional guidance about the model"
     )
+    # Pricing per 1M tokens (USD) — used for cost estimation
+    input_cost: Optional[float] = Field(
+        None, description="Cost per 1M input tokens in USD"
+    )
+    output_cost: Optional[float] = Field(
+        None, description="Cost per 1M output tokens in USD"
+    )
 
 
 class StorageConfig(BaseModel):

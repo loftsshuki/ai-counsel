@@ -418,7 +418,10 @@
       <span id="sText" style="font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">Deliberating...</span>
     </div>
     <div id="sPhase" style="display:flex;gap:.4rem;font-family:var(--fm);font-size:.55rem"></div>
-    <div id="sTimer" style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted);font-variant-numeric:tabular-nums">0:00</div>
+    <div style="display:flex;align-items:center;gap:1rem">
+      <div id="sCost" style="font-family:var(--fm);font-size:.6rem;color:var(--gold);font-variant-numeric:tabular-nums;display:none">$0.000</div>
+      <div id="sTimer" style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted);font-variant-numeric:tabular-nums">0:00</div>
+    </div>
   </div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
@@ -535,9 +538,15 @@ async function loadModels(){
   try{
     const r=await fetch('/api/models');
     allModels=await r.json();
-    // Update button count
+    // Build pricing lookup and update button count
     let total=0;
-    for(const models of Object.values(allModels)) total+=models.length;
+    modelPricing={};
+    for(const[adapter,models]of Object.entries(allModels)){
+      total+=models.length;
+      for(const m of models){
+        modelPricing[`${m.adapter}/${m.id}`]={input_cost:m.input_cost||0,output_cost:m.output_cost||0};
+      }
+    }
     document.getElementById('modelsBtn').textContent=`Models (${total})`;
   }catch(e){console.error('Failed to load models',e);}
 }
@@ -560,7 +569,8 @@ function openPicker(){
       const isSelected=selModels.some(s=>s.adapter===m.adapter&&s.id===m.id);
       const tc=tierColors[m.tier]||'#4a4a3d';
       card.style.cssText=`display:flex;flex-direction:column;gap:.2rem;padding:.7rem .8rem;border-radius:6px;border:1px solid ${isSelected?'var(--green)':'var(--border)'};background:${isSelected?'oklch(95% .02 155)':'var(--surface2)'};cursor:pointer;text-align:left;transition:all .15s`;
-      card.innerHTML=`<span style="font-family:var(--fm);font-size:.7rem;font-weight:500;color:var(--cream)">${m.label}</span><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .4rem;border-radius:3px;background:${tc};color:oklch(92% .01 85);width:fit-content">${m.tier}</span>`;
+      const costLabel=m.input_cost!=null&&m.input_cost>0?`$${m.input_cost}/$${m.output_cost} per 1M`:m.input_cost===0?'Included':'Free';
+      card.innerHTML=`<span style="font-family:var(--fm);font-size:.7rem;font-weight:500;color:var(--cream)">${m.label}</span><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .4rem;border-radius:3px;background:${tc};color:oklch(92% .01 85)">${m.tier}</span><span style="font-family:var(--fm);font-size:.5rem;color:var(--cream-muted)">${costLabel}</span></div>`;
       card.onmouseenter=()=>{if(!isSelected)card.style.borderColor='var(--green-dim)';};
       card.onmouseleave=()=>{if(!isSelected)card.style.borderColor='var(--border)';};
       card.onclick=()=>{
@@ -612,6 +622,9 @@ function resetDebateUI(){
   document.getElementById('goBtn').disabled=true;
   document.getElementById('sText').textContent='Assembling council...';
   allResponseTexts=[];
+  runningCost=0;
+  document.getElementById('sCost').style.display='none';
+  document.getElementById('sCost').textContent='$0.000';
   renderPhases('starting');
 }
 
@@ -653,6 +666,7 @@ function refine(){
 
 let startTime=0;let timerInterval=null;let totalParticipants=0;let responsesReceived=0;let currentRound=0;let totalRounds=2;
 let originalQuestion='';let lastResultText='';let refinementCount=0;let allResponseTexts=[];
+let runningCost=0;let modelPricing={}; // {adapter/model_id: {input_cost, output_cost}}
 
 function startTimer(){
   startTime=Date.now();
@@ -726,6 +740,19 @@ function ev(t,d){
   if(t==='response'){
     responsesReceived++;
     allResponseTexts.push(`[${d.participant}] ${d.response}`);
+    // Calculate cost for this response
+    if(d.adapter && d.model_id && d.est_input_tokens && d.est_output_tokens){
+      const key=`${d.adapter}/${d.model_id}`;
+      const pricing=modelPricing[key];
+      if(pricing){
+        const inputCost=(d.est_input_tokens/1000000)*pricing.input_cost;
+        const outputCost=(d.est_output_tokens/1000000)*pricing.output_cost;
+        runningCost+=inputCost+outputCost;
+        const costEl=document.getElementById('sCost');
+        costEl.style.display='block';
+        costEl.textContent=runningCost<0.01?`$${runningCost.toFixed(4)}`:`$${runningCost.toFixed(3)}`;
+      }
+    }
     const modelName=d.participant.split('@')[0]||d.participant;
     document.getElementById('sText').textContent=`Round ${d.round}: ${modelName} responded`;
     addActivity('\ud83e\udde0',`${modelName} responded (Round ${d.round})`,'model');
@@ -777,8 +804,9 @@ function ev(t,d){
     document.getElementById('sSpinner').style.animation='none';
     document.getElementById('sSpinner').style.borderColor='var(--green)';
     const elapsed=Math.floor((Date.now()-startTime)/1000);
-    document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s`;
-    addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)`,'info');
+    const costStr=runningCost>0?(runningCost<0.01?` \u00b7 $${runningCost.toFixed(4)}`:` \u00b7 $${runningCost.toFixed(3)}`):'';
+    document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s${costStr}`;
+    addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)${costStr?` — Est. cost: ${costStr.trim().replace(' \u00b7 ','')}`:''}`,  'info');
     renderPhases('summary');
     // Save last result for refinement
     lastResultText=allResponseTexts.join('\n\n');

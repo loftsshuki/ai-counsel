@@ -482,11 +482,18 @@ The following files are available in the working directory:
             # Fire streaming callback so web UI can show this response immediately
             if on_event:
                 try:
+                    # Estimate tokens for cost tracking (~4 chars per token)
+                    est_input_tokens = len(enhanced_prompt) // 4
+                    est_output_tokens = len(response_text) // 4
                     await on_event("response", {
                         "round": response.round,
                         "participant": response.participant,
                         "response": response.response[:2000],
                         "timestamp": response.timestamp,
+                        "est_input_tokens": est_input_tokens,
+                        "est_output_tokens": est_output_tokens,
+                        "model_id": participant.model,
+                        "adapter": participant.cli,
                     })
                 except Exception as cb_err:
                     logger.warning(f"Event callback failed: {cb_err}")

@@ -116,6 +116,8 @@ async def list_models():
                 "tier": m.tier,
                 "default": getattr(m, "default", False),
                 "adapter": adapter_name,
+                "input_cost": m.input_cost,   # per 1M tokens, USD
+                "output_cost": m.output_cost,  # per 1M tokens, USD
             })
         if adapter_models:
             result[adapter_name] = adapter_models
