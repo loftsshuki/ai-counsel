@@ -301,15 +301,24 @@ model_registry:
       default: true
       enabled: true
   openrouter:
+    # ===== Anthropic =====
+    - id: "anthropic/claude-opus-4.6"
+      label: "Claude Opus 4.6 (OpenRouter)"
+      tier: "flagship"
+      default: true
+      enabled: true
+    - id: "anthropic/claude-sonnet-4.6"
+      label: "Claude Sonnet 4.6 (OpenRouter)"
+      tier: "premium"
+      enabled: true
     - id: "anthropic/claude-sonnet-4"
       label: "Claude Sonnet 4 (OpenRouter)"
-      tier: "premium"
-      default: true
+      tier: "balanced"
       enabled: true
     - id: "anthropic/claude-3.5-sonnet"
       label: "Claude 3.5 Sonnet (OpenRouter)"
       tier: "balanced"
-      enabled: true
+      enabled: false
     - id: "openai/gpt-4o"
       label: "GPT-4o (OpenRouter)"
       tier: "balanced"
@@ -330,10 +339,26 @@ model_registry:
       label: "DeepSeek R1 (OpenRouter)"
       tier: "reasoning"
       enabled: true
+    - id: "qwen/qwen3.5-397b-a17b"
+      label: "Qwen 3.5 397B (OpenRouter)"
+      tier: "flagship"
+      enabled: true
+    - id: "qwen/qwen3.5-122b-a10b"
+      label: "Qwen 3.5 122B (OpenRouter)"
+      tier: "premium"
+      enabled: true
+    - id: "qwen/qwen3-max-thinking"
+      label: "Qwen 3 Max Thinking (OpenRouter)"
+      tier: "reasoning"
+      enabled: true
+    - id: "qwen/qwen3-coder-next"
+      label: "Qwen 3 Coder Next (OpenRouter)"
+      tier: "coding"
+      enabled: true
     - id: "qwen/qwen-2.5-72b-instruct"
       label: "Qwen 2.5 72B (OpenRouter)"
       tier: "general"
-      enabled: true
+      enabled: false
     # ===== OpenAI Frontier Models =====
     - id: "openai/gpt-5.4"
       label: "GPT-5.4 (OpenRouter)"
@@ -386,6 +411,19 @@ model_registry:
       label: "Llama 3.3 70B FREE (slow)"
       tier: "free"
       enabled: false  # Disabled - too slow (70B params)
+    # ===== Mistral =====
+    - id: "mistralai/mistral-small-2603"
+      label: "Mistral Small 4 (OpenRouter)"
+      tier: "speed"
+      enabled: true
+    - id: "mistralai/mistral-small-creative"
+      label: "Mistral Small Creative (OpenRouter)"
+      tier: "balanced"
+      enabled: true
+    - id: "mistralai/devstral-2512"
+      label: "Devstral 2 (OpenRouter)"
+      tier: "coding"
+      enabled: true
     - id: "mistralai/mistral-small-3.1-24b-instruct:free"
       label: "Mistral Small 24B FREE"
       tier: "free-fast"
@@ -402,6 +440,18 @@ model_registry:
       label: "Qwen 3 32B FREE"
       tier: "free-fast"
       enabled: false  # Disabled - removed from OpenRouter as of 2026-03-14
+    - id: "xiaomi/mimo-v2-pro"
+      label: "Xiaomi MiMo-V2-Pro"
+      tier: "premium"
+      enabled: true
+    - id: "xiaomi/mimo-v2-omni"
+      label: "Xiaomi MiMo-V2-Omni"
+      tier: "balanced"
+      enabled: true
+    - id: "xiaomi/mimo-v2-flash"
+      label: "Xiaomi MiMo-V2-Flash"
+      tier: "speed"
+      enabled: true
     - id: "xiaomi/mimo-vl-7b-rl:free"
       label: "MiMo-V2-Flash FREE (Xiaomi, 256K ctx)"
       tier: "free-fast"
