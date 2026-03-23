@@ -6,502 +6,614 @@
 <title>AI Counsel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* Deep green + cream war room palette */
-    --green-950: oklch(14% 0.04 155);
-    --green-900: oklch(18% 0.05 155);
-    --green-800: oklch(24% 0.06 155);
-    --green-700: oklch(32% 0.08 155);
-    --green-600: oklch(42% 0.10 155);
-    --green-500: oklch(52% 0.12 155);
-    --green-400: oklch(65% 0.14 155);
-    --green-300: oklch(78% 0.10 155);
-
+    --green-950: oklch(12% 0.04 155);
+    --green-900: oklch(16% 0.05 155);
+    --green-800: oklch(22% 0.06 155);
+    --green-700: oklch(30% 0.07 155);
+    --green-600: oklch(40% 0.10 155);
+    --green-500: oklch(50% 0.12 155);
+    --green-400: oklch(63% 0.14 155);
+    --green-300: oklch(75% 0.10 155);
     --cream-50: oklch(97% 0.01 85);
     --cream-100: oklch(95% 0.015 85);
     --cream-200: oklch(90% 0.02 85);
     --cream-300: oklch(82% 0.025 80);
-    --cream-500: oklch(70% 0.03 80);
-    --cream-700: oklch(55% 0.02 80);
-
-    --amber-500: oklch(72% 0.15 75);
+    --cream-500: oklch(68% 0.03 80);
+    --cream-700: oklch(52% 0.02 80);
     --amber-400: oklch(78% 0.13 75);
-    --red-500: oklch(55% 0.20 25);
     --red-400: oklch(65% 0.18 25);
     --blue-500: oklch(60% 0.12 250);
-
     --bg: var(--green-950);
     --surface: var(--green-900);
-    --surface-raised: var(--green-800);
-    --border: var(--green-700);
-    --border-subtle: oklch(22% 0.04 155);
+    --border: oklch(20% 0.04 155);
     --text: var(--cream-100);
-    --text-secondary: var(--cream-500);
+    --text-dim: var(--cream-500);
     --text-muted: var(--cream-700);
     --accent: var(--green-400);
-    --accent-dim: oklch(65% 0.14 155 / 0.15);
-
     --font-display: 'Cormorant Garamond', Georgia, serif;
     --font-body: 'Outfit', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
-
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ===== HEADER ===== */
-  .header {
-    padding: 1.25rem 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .header-left { display: flex; align-items: center; gap: 1.5rem; }
-  .logo {
-    font-family: var(--font-display);
-    font-size: 1.35rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--cream-100);
-  }
-  .status-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.7rem;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-  .status-chip.live { border-color: var(--accent); color: var(--accent); }
-  .status-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--text-muted);
-  }
-  .status-dot.active {
-    background: var(--accent);
-    box-shadow: 0 0 8px oklch(65% 0.14 155 / 0.5);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-  .header-meta {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    letter-spacing: 0.05em;
-  }
-
-  /* ===== LAYOUT ===== */
-  .main { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 56px); }
-
-  /* ===== SIDEBAR ===== */
-  .sidebar {
-    border-right: 1px solid var(--border-subtle);
-    padding: 2rem 1.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    overflow-y: auto;
-    max-height: calc(100vh - 56px);
-  }
-  .sidebar-section { }
-  .sidebar-label {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 0.6rem;
-  }
-  textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 3px;
-    color: var(--text);
-    padding: 0.75rem;
-    font-family: var(--font-body);
-    font-size: 0.85rem;
-    line-height: 1.6;
-    resize: vertical;
-    min-height: 100px;
-    transition: border-color 200ms var(--ease-out-quart);
-  }
-  textarea:focus { outline: none; border-color: var(--green-600); }
-  select, input[type=number] {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 3px;
-    color: var(--text);
-    padding: 0.55rem 0.75rem;
-    font-family: var(--font-body);
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: border-color 200ms var(--ease-out-quart);
-    appearance: none;
-  }
-  select:focus, input:focus { outline: none; border-color: var(--green-600); }
-  .input-row { display: flex; gap: 0.75rem; }
-  .input-row > * { flex: 1; }
-
-  .btn-primary {
-    width: 100%;
-    background: var(--green-600);
-    color: var(--cream-50);
-    border: none;
-    border-radius: 3px;
-    padding: 0.7rem 1.5rem;
-    font-family: var(--font-body);
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.03em;
-    cursor: pointer;
-    transition: background 150ms, opacity 150ms;
-  }
-  .btn-primary:hover { background: var(--green-500); }
-  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-
-  /* ===== CONVERGENCE ===== */
-  .convergence-panel {
-    padding: 1rem 1.25rem;
-    background: var(--surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: 3px;
-  }
-  .convergence-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 0.5rem;
-  }
-  .convergence-header .label {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .convergence-header .value {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--accent);
-  }
-  .convergence-track {
-    height: 3px;
-    background: var(--border-subtle);
-    border-radius: 1px;
+  /* ===== TOPO SVG BACKGROUND ===== */
+  .topo-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
     overflow: hidden;
+    pointer-events: none;
   }
-  .convergence-fill {
+  .topo-bg svg {
+    width: 100%;
     height: 100%;
-    background: var(--accent);
-    border-radius: 1px;
-    width: 0%;
-    transition: width 600ms var(--ease-out-expo);
-  }
-  .convergence-status {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    margin-top: 0.35rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    opacity: 0.07;
   }
 
-  /* ===== FEED ===== */
-  .feed {
-    padding: 2rem 2.5rem;
-    overflow-y: auto;
-    max-height: calc(100vh - 56px);
-  }
-  .feed-empty {
+  /* ===== HERO ===== */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 60vh;
-    text-align: center;
+    padding: 3rem 2rem 4rem;
+    transition: min-height 500ms var(--ease-out-expo);
   }
-  .feed-empty h2 {
-    font-family: var(--font-display);
-    font-size: 1.8rem;
+  .hero.compact {
+    min-height: auto;
+    padding: 2.5rem 2rem 2rem;
+  }
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
     font-weight: 500;
-    color: var(--cream-300);
-    margin-bottom: 0.5rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+    opacity: 0;
+    animation: fadeUp 600ms 200ms var(--ease-out-expo) forwards;
   }
-  .feed-empty p {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    max-width: 360px;
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.8rem, 6vw, 4.5rem);
+    font-weight: 600;
+    line-height: 1.1;
+    text-align: center;
+    color: var(--cream-50);
+    margin-bottom: 0.75rem;
+    opacity: 0;
+    animation: fadeUp 600ms 350ms var(--ease-out-expo) forwards;
+  }
+  .hero-subtitle {
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    font-weight: 300;
+    color: var(--cream-500);
+    text-align: center;
+    max-width: 480px;
     line-height: 1.7;
+    margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeUp 600ms 500ms var(--ease-out-expo) forwards;
+  }
+  .hero.compact .hero-title { font-size: clamp(1.8rem, 3vw, 2.2rem); margin-bottom: 0.4rem; }
+  .hero.compact .hero-subtitle { display: none; }
+  .hero.compact .hero-eyebrow { margin-bottom: 0.75rem; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Response entries */
+  /* ===== SEARCH BOX ===== */
+  .search-wrap {
+    width: 100%;
+    max-width: 720px;
+    opacity: 0;
+    animation: fadeUp 600ms 650ms var(--ease-out-expo) forwards;
+  }
+  .search-box {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  .search-box:focus-within {
+    border-color: var(--green-600);
+    box-shadow: 0 0 0 3px oklch(40% 0.10 155 / 0.15);
+  }
+  .search-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    padding: 1.1rem 1.25rem;
+    padding-right: 7rem;
+    min-height: 60px;
+    resize: none;
+    outline: none;
+  }
+  .search-input::placeholder { color: var(--cream-700); }
+  .search-controls {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .panel-select {
+    background: var(--green-800);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--cream-300);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.35rem 0.5rem;
+    cursor: pointer;
+    appearance: none;
+    outline: none;
+  }
+  .panel-select:focus { border-color: var(--green-600); }
+  .search-btn {
+    background: var(--green-600);
+    color: var(--cream-50);
+    border: none;
+    border-radius: 4px;
+    padding: 0.45rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 150ms;
+  }
+  .search-btn:hover { background: var(--green-500); }
+  .search-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ===== CATEGORY CARDS ===== */
+  .categories {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 600ms 800ms var(--ease-out-expo) forwards;
+  }
+  .categories.hidden { display: none; }
+  .cat-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 0.6rem;
+  }
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    transition: border-color 200ms, transform 150ms var(--ease-out-quart);
+  }
+  .cat-card:hover {
+    border-color: var(--green-600);
+    transform: translateY(-2px);
+  }
+  .cat-icon {
+    font-size: 1.2rem;
+    margin-bottom: 0.35rem;
+    display: block;
+    line-height: 1;
+  }
+  .cat-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--cream-200);
+    margin-bottom: 0.15rem;
+  }
+  .cat-desc {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .cat-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    background: var(--green-600);
+    color: var(--cream-50);
+    padding: 0.1rem 0.35rem;
+    border-radius: 2px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .status-bar {
+    position: relative;
+    z-index: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.6rem 2rem;
+    background: var(--green-900);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+  }
+  .status-bar.visible { display: flex; }
+  .status-dot-sm {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .convergence-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .conv-track-sm {
+    width: 100px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .conv-fill-sm {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 500ms var(--ease-out-expo);
+    border-radius: 1px;
+  }
+
+  /* ===== DEBATE FEED ===== */
+  .debate-section {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+    display: none;
+  }
+  .debate-section.visible { display: block; }
   .response-entry {
     margin-bottom: 2.5rem;
     opacity: 0;
     transform: translateY(12px);
-    animation: entryReveal 400ms var(--ease-out-expo) forwards;
+    animation: entryReveal 450ms var(--ease-out-expo) forwards;
   }
   @keyframes entryReveal { to { opacity: 1; transform: translateY(0); } }
   .response-meta {
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
   }
-  .response-participant {
+  .response-who {
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: var(--cream-100);
   }
   .response-round {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--text-muted);
+    font-size: 0.6rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+    color: var(--text-muted);
   }
-  .response-body {
+  .response-text {
     font-size: 0.88rem;
-    line-height: 1.75;
+    line-height: 1.8;
     color: var(--cream-300);
-    max-width: 65ch;
+    max-width: 62ch;
     white-space: pre-wrap;
     max-height: 400px;
     overflow-y: auto;
   }
-  .response-divider {
-    width: 40px;
+  .response-rule {
+    width: 36px;
     height: 1px;
     background: var(--border);
     margin-top: 2rem;
   }
 
   /* ===== RESULTS ===== */
-  .results {
-    margin-top: 1rem;
-    padding: 2rem 2.5rem;
-    border-top: 1px solid var(--border-subtle);
+  .results-section {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 2rem 5rem;
     display: none;
   }
-  .results.visible { display: block; animation: entryReveal 500ms var(--ease-out-expo) forwards; }
-  .results-header {
+  .results-section.visible { display: block; animation: entryReveal 500ms var(--ease-out-expo) forwards; }
+  .results-divider {
+    width: 60px;
+    height: 2px;
+    background: var(--green-600);
+    margin-bottom: 2rem;
+  }
+  .results-title {
     font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 600;
     color: var(--cream-100);
     margin-bottom: 1.5rem;
   }
-  .verdict-row {
+  .verdict-strip {
     display: flex;
-    gap: 2rem;
-    align-items: baseline;
-    margin-bottom: 1.5rem;
+    gap: 2.5rem;
+    margin-bottom: 2rem;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
   }
+  .verdict-item { }
   .verdict-label {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-muted);
+    margin-bottom: 0.2rem;
   }
-  .verdict-value {
-    font-family: var(--font-body);
-    font-size: 1rem;
-    font-weight: 600;
-  }
-  .verdict-value.approve { color: var(--accent); }
-  .verdict-value.changes { color: var(--red-400); }
-  .verdict-value.notes { color: var(--amber-400); }
-
-  .exec-summary {
-    font-size: 0.9rem;
-    line-height: 1.8;
+  .verdict-val { font-size: 1rem; font-weight: 600; }
+  .v-approve { color: var(--accent); }
+  .v-changes { color: var(--red-400); }
+  .v-notes { color: var(--amber-400); }
+  .exec-text {
+    font-size: 0.92rem;
+    line-height: 1.85;
     color: var(--cream-300);
-    max-width: 60ch;
-    margin-bottom: 2rem;
+    max-width: 58ch;
+    margin-bottom: 2.5rem;
   }
-
-  /* Findings table */
-  .findings-table {
+  .findings-tbl {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.8rem;
   }
-  .findings-table th {
+  .findings-tbl th {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-muted);
     text-align: left;
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid var(--border);
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--green-700);
   }
-  .findings-table td {
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid var(--border-subtle);
+  .findings-tbl td {
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--border);
     color: var(--cream-300);
     vertical-align: top;
   }
-  .severity-critical { color: var(--red-400); font-weight: 600; }
-  .severity-high { color: var(--amber-400); font-weight: 600; }
-  .severity-medium { color: var(--blue-500); }
-  .severity-low { color: var(--text-muted); }
+  .sev-critical { color: var(--red-400); font-weight: 600; }
+  .sev-high { color: var(--amber-400); font-weight: 600; }
+  .sev-medium { color: var(--blue-500); }
+  .sev-low { color: var(--text-muted); }
 
-  /* ===== RESPONSIVE ===== */
-  @media (max-width: 900px) {
-    .main { grid-template-columns: 1fr; }
-    .sidebar {
-      border-right: none;
-      border-bottom: 1px solid var(--border-subtle);
-      max-height: none;
-      padding: 1.5rem;
-    }
-    .feed { max-height: none; padding: 1.5rem; }
-    .header { padding: 1rem 1.5rem; }
+  /* ===== FOOTER ===== */
+  .footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 600px) {
+    .cat-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding: 2rem 1.25rem 3rem; }
+    .verdict-strip { flex-wrap: wrap; gap: 1.5rem; }
   }
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="header-left">
-    <span class="logo">AI Counsel</span>
-    <div class="status-chip" id="statusChip">
-      <div class="status-dot" id="statusDot"></div>
-      <span id="statusLabel">Ready</span>
-    </div>
-  </div>
-  <div class="header-meta" id="headerMeta"></div>
-</header>
-
-<div class="main">
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Question</div>
-      <textarea id="question" placeholder="What should the council deliberate on?">Review this codebase for quality, security, and architectural issues.</textarea>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">Panel</div>
-      <select id="panel"></select>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="input-row">
-        <div>
-          <div class="sidebar-label">Rounds</div>
-          <input type="number" id="rounds" value="2" min="1" max="5">
-        </div>
-      </div>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="convergence-panel" id="convergencePanel" style="display:none">
-        <div class="convergence-header">
-          <span class="label">Convergence</span>
-          <span class="value" id="convergenceValue">0%</span>
-        </div>
-        <div class="convergence-track">
-          <div class="convergence-fill" id="convergenceFill"></div>
-        </div>
-        <div class="convergence-status" id="convergenceStatus"></div>
-      </div>
-    </div>
-
-    <div class="sidebar-section" style="margin-top:auto">
-      <button class="btn-primary" id="startBtn" onclick="startDeliberation()">Begin Deliberation</button>
-    </div>
-  </aside>
-
-  <main class="feed" id="feed">
-    <div class="feed-empty" id="feedEmpty">
-      <h2>The Council Awaits</h2>
-      <p>Select a panel and pose your question. Multiple AI models will debate, challenge each other, and converge on a recommendation.</p>
-    </div>
-  </main>
+<!-- Topo contour background -->
+<div class="topo-bg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <style>
+      .topo-line { fill: none; stroke: oklch(63% 0.14 155); stroke-width: 0.8; }
+    </style>
+  </defs>
+  <path class="topo-line" d="M-50,200 Q150,180 300,220 T600,190 T900,230 T1050,200"/>
+  <path class="topo-line" d="M-50,240 Q200,210 350,260 T650,225 T950,270 T1050,240"/>
+  <path class="topo-line" d="M-50,290 Q180,260 320,310 T620,275 T920,320 T1050,290"/>
+  <path class="topo-line" d="M-50,350 Q210,320 380,370 T680,335 T980,380 T1050,350"/>
+  <path class="topo-line" d="M-50,420 Q170,390 340,440 T640,405 T940,450 T1050,420"/>
+  <path class="topo-line" d="M-50,480 Q220,450 390,500 T690,465 T990,510 T1050,480"/>
+  <path class="topo-line" d="M-50,550 Q190,520 350,570 T650,535 T950,580 T1050,550"/>
+  <path class="topo-line" d="M-50,620 Q230,590 400,640 T700,605 T1000,650 T1050,620"/>
+  <path class="topo-line" d="M-50,690 Q200,660 370,710 T670,675 T970,720 T1050,690"/>
+  <path class="topo-line" d="M-50,760 Q240,730 410,780 T710,745 T1010,790 T1050,760"/>
+  <path class="topo-line" d="M-50,830 Q180,800 350,850 T650,815 T950,860 T1050,830"/>
+  <path class="topo-line" d="M-50,900 Q220,870 390,920 T690,885 T990,930 T1050,900"/>
+  <!-- Circular contours -->
+  <ellipse class="topo-line" cx="500" cy="500" rx="280" ry="180" transform="rotate(-8 500 500)"/>
+  <ellipse class="topo-line" cx="500" cy="500" rx="220" ry="140" transform="rotate(-8 500 500)"/>
+  <ellipse class="topo-line" cx="500" cy="500" rx="160" ry="100" transform="rotate(-8 500 500)"/>
+  <ellipse class="topo-line" cx="500" cy="500" rx="100" ry="60" transform="rotate(-8 500 500)"/>
+  <ellipse class="topo-line" cx="300" cy="300" rx="150" ry="90" transform="rotate(15 300 300)"/>
+  <ellipse class="topo-line" cx="300" cy="300" rx="100" ry="55" transform="rotate(15 300 300)"/>
+  <ellipse class="topo-line" cx="750" cy="700" rx="180" ry="110" transform="rotate(-12 750 700)"/>
+  <ellipse class="topo-line" cx="750" cy="700" rx="120" ry="70" transform="rotate(-12 750 700)"/>
+  <ellipse class="topo-line" cx="750" cy="700" rx="60" ry="35" transform="rotate(-12 750 700)"/>
+</svg>
 </div>
 
-<div class="results" id="resultsSection">
-  <div class="results-header">Deliberation Complete</div>
-  <div class="verdict-row" id="verdictRow" style="display:none">
-    <div><div class="verdict-label">Verdict</div><div class="verdict-value" id="verdictText"></div></div>
-    <div><div class="verdict-label">Risk</div><div class="verdict-value" id="riskText"></div></div>
-    <div><div class="verdict-label">Findings</div><div class="verdict-value" id="findingsCount"></div></div>
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-eyebrow">Multi-Model Deliberation</div>
+  <h1 class="hero-title">AI Counsel</h1>
+  <p class="hero-subtitle">Pose a question. A council of AI models will debate, challenge each other, and converge on a recommendation.</p>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <textarea class="search-input" id="question" rows="1" placeholder="Ask the council anything..." oninput="autoResize(this)"></textarea>
+      <div class="search-controls">
+        <select class="panel-select" id="panel"></select>
+        <button class="search-btn" id="startBtn" onclick="startDeliberation()">Deliberate</button>
+      </div>
+    </div>
   </div>
-  <div class="exec-summary" id="execSummary" style="display:none"></div>
-  <table class="findings-table" id="findingsTable" style="display:none">
+
+  <div class="categories" id="categories">
+    <div class="cat-label">Or try a category</div>
+    <div class="cat-grid" id="catGrid"></div>
+  </div>
+</section>
+
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="status-dot-sm"></div>
+  <span id="statusText">Deliberating</span>
+  <div class="convergence-inline">
+    <div class="conv-track-sm"><div class="conv-fill-sm" id="convFill"></div></div>
+    <span id="convLabel">0%</span>
+  </div>
+  <span id="modelCount"></span>
+</div>
+
+<!-- DEBATE FEED -->
+<div class="debate-section" id="debateSection"></div>
+
+<!-- RESULTS -->
+<div class="results-section" id="resultsSection">
+  <div class="results-divider"></div>
+  <div class="results-title">Council Verdict</div>
+  <div class="verdict-strip" id="verdictStrip" style="display:none">
+    <div class="verdict-item"><div class="verdict-label">Verdict</div><div class="verdict-val" id="vVerdict"></div></div>
+    <div class="verdict-item"><div class="verdict-label">Risk Level</div><div class="verdict-val" id="vRisk"></div></div>
+    <div class="verdict-item"><div class="verdict-label">Findings</div><div class="verdict-val" id="vCount"></div></div>
+  </div>
+  <div class="exec-text" id="execText" style="display:none"></div>
+  <table class="findings-tbl" id="findingsTbl" style="display:none">
     <thead><tr><th>#</th><th>Severity</th><th>Category</th><th>Description</th></tr></thead>
     <tbody id="findingsBody"></tbody>
   </table>
 </div>
 
+<div class="footer">AI Counsel &middot; Multi-model deliberation engine</div>
+
 <script>
+const CATEGORIES = [
+  { icon: "\u{1F50D}", name: "Code Review", desc: "Security, architecture, correctness", question: "Review this codebase for quality, security, and architectural issues. Identify specific problems with file references." },
+  { icon: "\u{1F9E0}", name: "Architecture", desc: "System design decisions", question: "Evaluate the current architecture of this project. What are the strengths, weaknesses, and what would you change?" },
+  { icon: "\u{1F6E1}", name: "Security Audit", desc: "Vulnerabilities & threats", question: "Perform a thorough security audit. Check for XSS, injection, auth bypass, exposed secrets, and OWASP Top 10 issues." },
+  { icon: "\u26A1", name: "Performance", desc: "Speed & optimization", question: "Analyze this codebase for performance issues. Look for N+1 queries, missing indexes, unbounded loops, and memory leaks." },
+  { icon: "\u{1F4A1}", name: "Brainstorm", desc: "Generate & debate ideas", question: "Brainstorm creative approaches to improve this project. Each model should propose a different direction and defend it." },
+  { icon: "\u{1F680}", name: "Ship Readiness", desc: "Is this ready for production?", question: "Is this codebase ready to ship to production? Check error handling, logging, monitoring, edge cases, and user experience." },
+  { icon: "\u{1F4CA}", name: "Tech Strategy", desc: "Stack & tooling choices", question: "Evaluate our technology choices. Are we using the right frameworks, databases, and infrastructure for our scale and goals?" },
+  { icon: "\u{1F3AF}", name: "UX & Conversion", desc: "User experience review", question: "Review the user-facing experience. Is the flow intuitive? Are calls-to-action clear? Would a visitor actually convert?" },
+  { icon: "\u{1F4DD}", name: "Documentation", desc: "Docs quality & coverage", question: "Evaluate the documentation quality. Are setup instructions clear? Are APIs documented? Would a new developer be able to onboard?" },
+  { icon: "\u2696\uFE0F", name: "Trade-offs", desc: "Weigh competing options", question: "We need to make a decision. Analyze the trade-offs between the approaches described and recommend the best path forward." },
+  { icon: "\u{1F527}", name: "Refactoring", desc: "Clean up & simplify", question: "Identify the highest-impact refactoring opportunities. What code should be simplified, consolidated, or restructured?" },
+  { icon: "\u{1F30D}", name: "Accessibility", desc: "WCAG & inclusive design", question: "Audit this project for accessibility. Check ARIA labels, keyboard navigation, color contrast, semantic HTML, and screen reader support." },
+  { icon: "\u{1F4E6}", name: "Full Stack Audit", desc: "Chain: architecture \u2192 code \u2192 security \u2192 performance", question: "Run a complete full-stack audit of this codebase. Start with architecture review, then code quality, then security, then performance. Identify issues at every layer.", panel: "full-stack-audit", badge: "CHAIN" },
+  { icon: "\u{1F5A5}\uFE0F", name: "Frontend Review", desc: "Chain: UX \u2192 accessibility \u2192 performance \u2192 security", question: "Run a complete frontend review. Check user experience flow, accessibility compliance, frontend performance (bundle size, rendering), and client-side security.", panel: "frontend-review", badge: "CHAIN" },
+  { icon: "\u2699\uFE0F", name: "Backend Review", desc: "Chain: architecture \u2192 security \u2192 data \u2192 reliability", question: "Run a complete backend review. Check API architecture, authentication/authorization, database design and queries, error handling, and system reliability.", panel: "backend-review", badge: "CHAIN" },
+  { icon: "\u{1F680}", name: "Launch Readiness", desc: "Chain: security \u2192 performance \u2192 UX \u2192 ops", question: "Is this ready to launch? Run security audit, performance check, UX review, and ops readiness (logging, monitoring, error handling, deployment).", panel: "launch-readiness", badge: "CHAIN" },
+];
+
+function renderCategories() {
+  const grid = document.getElementById('catGrid');
+  CATEGORIES.forEach(cat => {
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    const badge = cat.badge ? `<span class="cat-badge">${cat.badge}</span>` : '';
+    card.innerHTML = `<span class="cat-icon">${cat.icon}</span><div class="cat-name">${cat.name}${badge}</div><div class="cat-desc">${cat.desc}</div>`;
+    card.onclick = () => {
+      document.getElementById('question').value = cat.question;
+      if (cat.panel) {
+        const sel = document.getElementById('panel');
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === cat.panel) { sel.selectedIndex = i; break; }
+        }
+      }
+      autoResize(document.getElementById('question'));
+      document.getElementById('question').focus();
+    };
+    grid.appendChild(card);
+  });
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(60, el.scrollHeight) + 'px';
+}
+
 async function loadPanels() {
   try {
     const resp = await fetch('/api/panels');
     const panels = await resp.json();
-    const select = document.getElementById('panel');
-    for (const [name, info] of Object.entries(panels)) {
+    const sel = document.getElementById('panel');
+    for (const [name] of Object.entries(panels)) {
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name;
-      select.appendChild(opt);
+      sel.appendChild(opt);
     }
-  } catch(e) { console.error('Failed to load panels:', e); }
+  } catch(e) {}
 }
 
 function startDeliberation() {
   const question = document.getElementById('question').value;
   const panel = document.getElementById('panel').value;
-  const rounds = parseInt(document.getElementById('rounds').value);
   if (!question.trim()) return;
 
-  // Reset
-  const feed = document.getElementById('feed');
-  feed.innerHTML = '';
+  // Compact hero
+  document.getElementById('hero').classList.add('compact');
+  document.getElementById('categories').classList.add('hidden');
+  document.getElementById('statusBar').classList.add('visible');
+  document.getElementById('debateSection').classList.add('visible');
+  document.getElementById('debateSection').innerHTML = '';
   document.getElementById('resultsSection').classList.remove('visible');
-  document.getElementById('convergencePanel').style.display = 'block';
-  document.getElementById('convergenceFill').style.width = '0%';
-  document.getElementById('convergenceValue').textContent = '0%';
-  document.getElementById('convergenceStatus').textContent = '';
-  document.getElementById('statusDot').classList.add('active');
-  document.getElementById('statusChip').classList.add('live');
-  document.getElementById('statusLabel').textContent = 'Deliberating';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('convFill').style.width = '0%';
+  document.getElementById('convLabel').textContent = '0%';
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('headerMeta').textContent = '';
 
-  const body = JSON.stringify({ question, panel, rounds, working_directory: '.' });
+  const body = JSON.stringify({ question, panel, rounds: 2, working_directory: '.' });
 
   fetch('/api/deliberate/stream', {
     method: 'POST',
@@ -511,8 +623,6 @@ function startDeliberation() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    let responseCount = 0;
-
     function read() {
       reader.read().then(({ done, value }) => {
         if (done) { onComplete(); return; }
@@ -522,123 +632,102 @@ function startDeliberation() {
         for (const block of events) {
           const lines = block.split('\n');
           let type = '', data = '';
-          for (const line of lines) {
-            if (line.startsWith('event: ')) type = line.slice(7);
-            else if (line.startsWith('data: ')) data = line.slice(6);
+          for (const ln of lines) {
+            if (ln.startsWith('event: ')) type = ln.slice(7);
+            else if (ln.startsWith('data: ')) data = ln.slice(6);
           }
-          if (type && data) {
-            try { handleEvent(type, JSON.parse(data)); } catch(e) {}
-          }
+          if (type && data) { try { handleEvent(type, JSON.parse(data)); } catch(e) {} }
         }
         read();
       });
     }
     read();
-  }).catch(err => { onComplete(); });
+  }).catch(() => onComplete());
 }
 
 function handleEvent(type, data) {
   switch(type) {
     case 'status':
-      if (data.participants) {
-        document.getElementById('headerMeta').textContent =
-          data.participants.length + ' models \u00b7 ' + (data.rounds || 2) + ' rounds';
-      }
+      if (data.participants) document.getElementById('modelCount').textContent = data.participants.length + ' models';
       break;
     case 'response': addResponse(data); break;
-    case 'convergence': updateConvergence(data); break;
+    case 'convergence':
+      const pct = Math.round(data.similarity * 100);
+      document.getElementById('convFill').style.width = pct + '%';
+      document.getElementById('convLabel').textContent = pct + '% ' + data.status;
+      break;
     case 'summary': showSummary(data); break;
     case 'findings': showFindings(data); break;
     case 'complete':
-      document.getElementById('statusLabel').textContent =
-        'Complete \u00b7 ' + data.rounds_completed + ' rounds';
+      document.getElementById('statusText').textContent = 'Complete \u00b7 ' + data.rounds_completed + ' rounds';
       onComplete();
       break;
     case 'error':
-      document.getElementById('statusLabel').textContent = 'Error';
+      document.getElementById('statusText').textContent = 'Error';
       onComplete();
       break;
   }
 }
 
 function addResponse(data) {
-  const feed = document.getElementById('feed');
+  const section = document.getElementById('debateSection');
   const entry = document.createElement('div');
   entry.className = 'response-entry';
   entry.innerHTML = `
     <div class="response-meta">
-      <span class="response-participant">${esc(data.participant)}</span>
+      <span class="response-who">${esc(data.participant)}</span>
       <span class="response-round">Round ${data.round}</span>
     </div>
-    <div class="response-body">${esc(data.response)}</div>
-    <div class="response-divider"></div>
+    <div class="response-text">${esc(data.response)}</div>
+    <div class="response-rule"></div>
   `;
-  feed.appendChild(entry);
+  section.appendChild(entry);
   entry.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-function updateConvergence(data) {
-  const pct = Math.round(data.similarity * 100);
-  document.getElementById('convergenceFill').style.width = pct + '%';
-  document.getElementById('convergenceValue').textContent = pct + '%';
-  document.getElementById('convergenceStatus').textContent = data.status;
-}
-
 function showSummary(data) {
-  const section = document.getElementById('resultsSection');
-  section.classList.add('visible');
+  const sec = document.getElementById('resultsSection');
+  sec.style.display = 'block';
+  sec.classList.add('visible');
   if (data.executive_summary) {
-    const el = document.getElementById('execSummary');
+    const el = document.getElementById('execText');
     el.style.display = 'block';
     el.textContent = data.executive_summary;
   }
 }
 
 function showFindings(data) {
-  const section = document.getElementById('resultsSection');
-  section.classList.add('visible');
-  const row = document.getElementById('verdictRow');
-  row.style.display = 'flex';
+  const sec = document.getElementById('resultsSection');
+  sec.style.display = 'block';
+  sec.classList.add('visible');
+  document.getElementById('verdictStrip').style.display = 'flex';
 
-  const vt = document.getElementById('verdictText');
-  vt.textContent = data.verdict;
-  vt.className = 'verdict-value ' + (
-    data.verdict === 'APPROVE' ? 'approve' :
-    data.verdict === 'REQUEST_CHANGES' ? 'changes' : 'notes'
-  );
-  document.getElementById('riskText').textContent = data.risk_level;
-  document.getElementById('findingsCount').textContent = data.findings_count;
+  const vv = document.getElementById('vVerdict');
+  vv.textContent = data.verdict;
+  vv.className = 'verdict-val ' + (data.verdict === 'APPROVE' ? 'v-approve' : data.verdict === 'REQUEST_CHANGES' ? 'v-changes' : 'v-notes');
+  document.getElementById('vRisk').textContent = data.risk_level;
+  document.getElementById('vCount').textContent = data.findings_count;
 
-  if (data.findings && data.findings.length > 0) {
-    const table = document.getElementById('findingsTable');
-    table.style.display = 'table';
+  if (data.findings && data.findings.length) {
+    document.getElementById('findingsTbl').style.display = 'table';
     const tbody = document.getElementById('findingsBody');
     tbody.innerHTML = '';
     data.findings.forEach((f, i) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td class="severity-${f.severity}">${f.severity}</td>
-        <td>${f.category}</td>
-        <td>${esc(f.description)}</td>
-      `;
+      tr.innerHTML = `<td>${i+1}</td><td class="sev-${f.severity}">${f.severity}</td><td>${f.category}</td><td>${esc(f.description)}</td>`;
       tbody.appendChild(tr);
     });
   }
 }
 
 function onComplete() {
-  document.getElementById('statusDot').classList.remove('active');
-  document.getElementById('statusChip').classList.remove('live');
+  document.getElementById('statusBar').querySelector('.status-dot-sm').style.animationPlayState = 'paused';
   document.getElementById('startBtn').disabled = false;
 }
 
-function esc(text) {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
-}
+function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
+renderCategories();
 loadPanels();
 </script>
 </body>
