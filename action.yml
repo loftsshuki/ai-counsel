@@ -1,0 +1,83 @@
+name: "AI Counsel Code Review"
+description: "Run multi-model AI code review on pull requests"
+branding:
+  icon: "shield"
+  color: "green"
+
+inputs:
+  panel:
+    description: "Panel to use for review (default: pre-commit-review)"
+    required: false
+    default: "pre-commit-review"
+  working_directory:
+    description: "Working directory for the codebase"
+    required: false
+    default: "."
+  rounds:
+    description: "Number of deliberation rounds (1-5)"
+    required: false
+    default: "2"
+  openrouter_api_key:
+    description: "OpenRouter API key (for cloud models)"
+    required: false
+  tavily_api_key:
+    description: "Tavily API key (for web search)"
+    required: false
+  fail_on_critical:
+    description: "Fail the action if critical findings are found"
+    required: false
+    default: "true"
+
+outputs:
+  verdict:
+    description: "Review verdict (APPROVE, APPROVE_WITH_NOTES, REQUEST_CHANGES)"
+  findings_count:
+    description: "Number of findings"
+  risk_level:
+    description: "Overall risk level (low, medium, high, critical)"
+  report:
+    description: "Full review report in markdown"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install AI Counsel
+      shell: bash
+      run: |
+        pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Get PR diff
+      shell: bash
+      run: |
+        git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr_diff.txt
+        echo "Diff size: $(wc -l < /tmp/pr_diff.txt) lines"
+
+    - name: Run AI Counsel Review
+      shell: bash
+      env:
+        OPENROUTER_API_KEY: ${{ inputs.openrouter_api_key }}
+        TAVILY_API_KEY: ${{ inputs.tavily_api_key }}
+      run: |
+        python ${{ github.action_path }}/action_entrypoint.py \
+          --panel "${{ inputs.panel }}" \
+          --working-directory "${{ inputs.working_directory }}" \
+          --rounds "${{ inputs.rounds }}" \
+          --diff-file "/tmp/pr_diff.txt" \
+          --output-file "/tmp/review_result.json" \
+          --fail-on-critical "${{ inputs.fail_on_critical }}"
+
+    - name: Post review comment
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ -f /tmp/review_report.md ]; then
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file /tmp/review_report.md
+        fi

@@ -39,6 +39,22 @@ class Participant(BaseModel):
             "If omitted, uses the adapter's configured default."
         ),
     )
+    persona: Optional[str] = Field(
+        default=None,
+        description=(
+            "Display name / persona for this participant (e.g., 'The Security Hawk', "
+            "'The Pragmatist'). Used in transcripts and to shape the model's perspective."
+        ),
+    )
+    system_prompt: Optional[str] = Field(
+        default=None,
+        description=(
+            "Custom system instructions prepended to this participant's prompt. "
+            "Use to define perspective, expertise, tone, or evaluation criteria. "
+            "Example: 'You are a senior security engineer. Prioritize threat modeling "
+            "and attack surface analysis in your responses.'"
+        ),
+    )
 
 
 class DeliberateRequest(BaseModel):
@@ -70,6 +86,19 @@ class DeliberateRequest(BaseModel):
     panel: Optional[str] = Field(
         default=None, description="Named panel preset from panels.yaml"
     )
+    chain_id: Optional[str] = Field(
+        default=None,
+        description=(
+            "Chain identifier linking multiple deliberations together. "
+            "When set, the previous chain step's structured findings and summary "
+            "are injected as context into this deliberation."
+        ),
+    )
+    chain_step: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Step number in a deliberation chain (1-indexed). Step 1 = first deliberation.",
+    )
 
 
 class RoundResponse(BaseModel):
@@ -88,6 +117,14 @@ class Summary(BaseModel):
     key_agreements: list[str] = Field(..., description="Points of agreement")
     key_disagreements: list[str] = Field(..., description="Points of disagreement")
     final_recommendation: str = Field(..., description="Final recommendation")
+    executive_summary: Optional[str] = Field(
+        default=None,
+        description=(
+            "Plain-English executive summary for non-technical stakeholders. "
+            "Three paragraphs: what was reviewed, what was found (in business terms), "
+            "and what to do about it (prioritized action items)."
+        ),
+    )
 
 
 class Vote(BaseModel):
@@ -183,6 +220,52 @@ class ConvergenceInfo(BaseModel):
     )
 
 
+class Finding(BaseModel):
+    """A structured finding from a code review or deliberation."""
+
+    severity: Literal["critical", "high", "medium", "low", "info"] = Field(
+        ..., description="Severity level of the finding"
+    )
+    category: Literal[
+        "security", "performance", "correctness", "architecture",
+        "maintainability", "error-handling", "testing", "other"
+    ] = Field(..., description="Category of the finding")
+    description: str = Field(
+        ..., description="Plain-English description of the issue"
+    )
+    file: Optional[str] = Field(
+        default=None, description="File path where the issue was found"
+    )
+    line: Optional[int] = Field(
+        default=None, description="Line number (if applicable)"
+    )
+    suggested_fix: Optional[str] = Field(
+        default=None, description="Suggested fix or remediation"
+    )
+    flagged_by: list[str] = Field(
+        default_factory=list,
+        description="Which participants flagged this finding",
+    )
+
+
+class StructuredFindings(BaseModel):
+    """Aggregated structured findings from a deliberation."""
+
+    verdict: Literal[
+        "APPROVE", "APPROVE_WITH_NOTES", "REQUEST_CHANGES", "NEEDS_DISCUSSION"
+    ] = Field(..., description="Overall verdict from the review")
+    risk_level: Literal["low", "medium", "high", "critical"] = Field(
+        ..., description="Overall risk level"
+    )
+    findings: list[Finding] = Field(
+        default_factory=list, description="List of specific findings"
+    )
+    findings_by_severity: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Count of findings per severity level",
+    )
+
+
 class DeliberationResult(BaseModel):
     """Model for complete deliberation result."""
 
@@ -208,4 +291,18 @@ class DeliberationResult(BaseModel):
     tool_executions: Optional[list] = Field(
         default_factory=list,
         description="List of tool executions during deliberation (evidence-based deliberation)",
+    )
+    structured_findings: Optional[StructuredFindings] = Field(
+        default=None,
+        description=(
+            "Structured, machine-readable findings extracted from the deliberation. "
+            "Includes verdict, risk level, and categorized findings with severity. "
+            "Available when models produce review-style output."
+        ),
+    )
+    chain_id: Optional[str] = Field(
+        default=None, description="Chain ID if this deliberation is part of a chain"
+    )
+    chain_step: Optional[int] = Field(
+        default=None, description="Step number in the chain"
     )

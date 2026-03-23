@@ -454,6 +454,45 @@ async def list_tools() -> list[Tool]:
         )
     )
 
+    # Health check tool
+    tools.append(
+        Tool(
+            name="run_health_check",
+            description=(
+                "Run a codebase health check by executing multiple review panels "
+                "(security, architecture, code quality) and aggregating results into "
+                "a scored report card (0-100, letter grade A-F). Produces plain-English "
+                "findings and category scores. Use this to get an overall picture of "
+                "code quality."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "working_directory": {
+                        "type": "string",
+                        "description": "Working directory of the codebase to check",
+                    },
+                    "panels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "default": ["security-audit", "architecture-review", "code-review"],
+                        "description": (
+                            f"Panel names to run for the health check. "
+                            f"Available: {', '.join(panels_config.keys()) if panels_config else 'none'}. "
+                            f"Default: security-audit, architecture-review, code-review"
+                        ),
+                    },
+                    "question": {
+                        "type": "string",
+                        "default": "Review this codebase for quality, security, and architectural issues. Identify specific problems with file references.",
+                        "description": "Question to ask each panel (default is a general health check prompt)",
+                    },
+                },
+                "required": ["working_directory"],
+            },
+        )
+    )
+
     return tools
 
 
@@ -479,6 +518,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         return await handle_query_decisions(arguments)
     if name == "get_quality_metrics":
         return await handle_get_quality_metrics(arguments)
+    if name == "run_health_check":
+        return await handle_health_check(arguments)
     elif name != "deliberate":
         error_msg = f"Unknown tool: {name}"
         logger.error(error_msg)
@@ -1048,6 +1089,94 @@ async def handle_get_quality_metrics(arguments: dict) -> list[TextContent]:
             "status": "failed",
         }
         return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
+
+
+async def handle_health_check(arguments: dict) -> list[TextContent]:
+    """
+    Run a codebase health check by executing multiple panels and aggregating scores.
+
+    Orchestrates sequential panel deliberations, extracts structured findings
+    from each, and computes an overall health score (0-100, A-F).
+    """
+    from deliberation.health_score import compute_health_score
+    from models.schema import DeliberateRequest, StructuredFindings
+
+    working_directory = arguments.get("working_directory", ".")
+    panel_names = arguments.get("panels", ["security-audit", "architecture-review", "code-review"])
+    question = arguments.get(
+        "question",
+        "Review this codebase for quality, security, and architectural issues. Identify specific problems with file references.",
+    )
+
+    # Validate panels exist
+    for panel_name in panel_names:
+        if panel_name not in panels_config:
+            available = ", ".join(panels_config.keys())
+            return [TextContent(type="text", text=json.dumps({
+                "error": f"Unknown panel '{panel_name}'. Available: {available}",
+                "status": "failed",
+            }, indent=2))]
+
+    results = []
+    all_findings = []
+    panel_summaries = []
+
+    for panel_name in panel_names:
+        panel = panels_config[panel_name]
+        logger.info(f"Health check: running panel '{panel_name}'...")
+
+        try:
+            # Build request from panel config
+            request_args = {
+                "question": question,
+                "participants": panel["participants"],
+                "mode": panel.get("mode", "quick"),
+                "rounds": panel.get("rounds", 2),
+                "working_directory": working_directory,
+            }
+            request = DeliberateRequest(**request_args)
+
+            # Run deliberation
+            result = await engine.execute(request)
+            results.append(result)
+
+            # Collect structured findings
+            if result.structured_findings:
+                all_findings.append(result.structured_findings)
+                panel_summaries.append({
+                    "panel": panel_name,
+                    "verdict": result.structured_findings.verdict,
+                    "findings_count": len(result.structured_findings.findings),
+                    "risk_level": result.structured_findings.risk_level,
+                })
+            else:
+                panel_summaries.append({
+                    "panel": panel_name,
+                    "verdict": "completed (no structured findings)",
+                    "findings_count": 0,
+                    "risk_level": "unknown",
+                })
+
+            logger.info(f"Health check: panel '{panel_name}' completed")
+
+        except Exception as e:
+            logger.error(f"Health check: panel '{panel_name}' failed: {e}")
+            panel_summaries.append({
+                "panel": panel_name,
+                "verdict": "FAILED",
+                "error": str(e),
+            })
+
+    # Compute aggregate health score
+    health = compute_health_score(all_findings)
+
+    response = {
+        "status": "complete",
+        "panels_run": panel_summaries,
+        "health_score": health,
+    }
+
+    return [TextContent(type="text", text=json.dumps(response, indent=2, default=str))]
 
 
 async def main():

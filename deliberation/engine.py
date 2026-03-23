@@ -170,8 +170,28 @@ class DeliberationEngine:
             self.tool_executor.register_tool(ListFilesTool(security_config=security_config))
             self.tool_executor.register_tool(RunCommandTool())
             self.tool_executor.register_tool(GetFileTreeTool())
+
+            # Register web search tool if enabled
+            tool_count = 5
+            if config and hasattr(config, "deliberation") and hasattr(config.deliberation, "web_search"):
+                web_search_cfg = config.deliberation.web_search
+                if web_search_cfg.enabled:
+                    try:
+                        from deliberation.web_search import WebSearchTool
+                        self.tool_executor.register_tool(
+                            WebSearchTool(
+                                provider=web_search_cfg.provider,
+                                tavily_api_key=web_search_cfg.api_key,
+                                max_results=web_search_cfg.max_results,
+                            )
+                        )
+                        tool_count += 1
+                        logger.info(f"Web search tool enabled (provider: {web_search_cfg.provider})")
+                    except Exception as e:
+                        logger.warning(f"Failed to initialize web search tool: {e}")
+
             logger.info(
-                "Tool executor initialized with 5 tools (read_file, search_code, list_files, run_command, get_file_tree)"
+                f"Tool executor initialized with {tool_count} tools"
             )
             if security_config and security_config.exclude_patterns:
                 logger.info(f"Tool security enabled with {len(security_config.exclude_patterns)} exclusion patterns")
@@ -250,6 +270,7 @@ The following files are available in the working directory:
 - `list_files`: List files matching glob patterns (e.g., "**/*.py")
 - `search_code`: Search for code patterns with regex
 - `read_file`: Read specific file contents
+- `web_search`: Search the web for current information (e.g., best practices, documentation)
 
 **Workflow:** Use the structure above to identify relevant files, then use tools to explore them.
 """
@@ -278,16 +299,28 @@ The following files are available in the working directory:
             adapter = self.adapters[participant.cli]
 
             reasoning_info = f", reasoning_effort={participant.reasoning_effort}" if participant.reasoning_effort else ""
+            persona_info = f", persona={participant.persona}" if participant.persona else ""
             logger.info(
                 f"Round {round_num}: Invoking {participant.model}@{participant.cli} "
                 f"with prompt_length={len(enhanced_prompt)} chars, "
                 f"context_length={len(context) if context else 0} chars, "
-                f"working_directory={working_directory}{reasoning_info}"
+                f"working_directory={working_directory}{reasoning_info}{persona_info}"
             )
+
+            # Build participant-specific prompt with persona/system_prompt
+            participant_prompt = enhanced_prompt
+            if participant.system_prompt or participant.persona:
+                persona_prefix_parts = []
+                if participant.persona:
+                    persona_prefix_parts.append(f"## Your Role: {participant.persona}")
+                if participant.system_prompt:
+                    persona_prefix_parts.append(participant.system_prompt)
+                persona_prefix = "\n\n".join(persona_prefix_parts)
+                participant_prompt = f"{persona_prefix}\n\n---\n\n{participant_prompt}"
 
             try:
                 response_text = await adapter.invoke(
-                    prompt=enhanced_prompt,
+                    prompt=participant_prompt,
                     model=participant.model,
                     context=context,
                     is_deliberation=True,
@@ -424,10 +457,15 @@ The following files are available in the working directory:
                                 f"Tool {tool_request.name} failed: {tool_result.error}"
                             )
 
-            # Create response object
+            # Create response object — use persona as display name if set
+            participant_id = (
+                f"{participant.persona} ({participant.model}@{participant.cli})"
+                if participant.persona
+                else f"{participant.model}@{participant.cli}"
+            )
             response = RoundResponse(
                 round=round_num,
-                participant=f"{participant.model}@{participant.cli}",
+                participant=participant_id,
                 response=response_text,
                 timestamp=datetime.now().isoformat(),
             )
@@ -435,6 +473,42 @@ The following files are available in the working directory:
             responses.append(response)
 
         return responses
+
+    def _get_chain_context(self, chain_id: str, current_step: int) -> str:
+        """
+        Get context from previous chain step's deliberation.
+
+        Searches the decision graph for the previous step in this chain
+        and formats its summary + findings as context.
+        """
+        if not self.graph_integration:
+            return ""
+
+        try:
+            # Search for previous chain step in decision graph
+            all_decisions = self.graph_integration.storage.get_all_decisions(limit=50)
+            prev_step = current_step - 1
+
+            for decision in all_decisions:
+                metadata = decision.metadata or {}
+                if metadata.get("chain_id") == chain_id and metadata.get("chain_step") == prev_step:
+                    context_parts = [
+                        f"## Previous Chain Step (Step {prev_step})",
+                        f"**Question:** {decision.question}",
+                        f"**Consensus:** {decision.consensus}",
+                    ]
+                    if decision.winning_option:
+                        context_parts.append(f"**Winning Option:** {decision.winning_option}")
+                    context_parts.append(
+                        f"\nUse the above context from the previous review step to inform your analysis."
+                    )
+                    return "\n".join(context_parts)
+
+            logger.debug(f"No previous chain step found for chain {chain_id} step {prev_step}")
+            return ""
+        except Exception as e:
+            logger.warning(f"Error retrieving chain context: {e}")
+            return ""
 
     def _truncate_output(
         self, output: Optional[str], max_chars: int = 1000
@@ -1060,6 +1134,14 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                 logger.warning(f"Error retrieving graph context: {e}")
                 graph_context = ""
 
+        # Inject chain context if this is a chained deliberation (step > 1)
+        chain_context = ""
+        if request.chain_id and request.chain_step and request.chain_step > 1:
+            chain_context = self._get_chain_context(request.chain_id, request.chain_step)
+            if chain_context:
+                graph_context = f"{graph_context}\n\n{chain_context}" if graph_context else chain_context
+                logger.info(f"Injected chain context from chain {request.chain_id} step {request.chain_step - 1}")
+
         # Determine actual rounds to execute
         # Quick mode forces single round for fast deliberation
         if request.mode == "quick":
@@ -1221,6 +1303,29 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                 final_recommendation="Please review the full debate below.",
             )
 
+        # Extract structured findings (uses same fallback chain as summarizer)
+        structured_findings = None
+        if self.summarizer_chain:
+            from deliberation.findings import FindingsExtractor
+
+            for adapter, model_name, display_name in self.summarizer_chain:
+                try:
+                    logger.info(f"Attempting findings extraction with {display_name}...")
+                    extractor = FindingsExtractor(adapter, model_name)
+                    structured_findings = await extractor.extract_findings(
+                        question=request.question, responses=all_responses
+                    )
+                    if structured_findings:
+                        logger.info(
+                            f"Findings extraction completed: {structured_findings.verdict}, "
+                            f"{len(structured_findings.findings)} findings"
+                        )
+                        break
+                except Exception as e:
+                    error_msg = str(e).split('\n')[0][:100]
+                    logger.warning(f"Findings extraction failed with {display_name}: {error_msg}")
+                    continue
+
         # Aggregate voting results if any votes were cast
         voting_result = self._aggregate_votes(all_responses)
         if voting_result:
@@ -1284,6 +1389,9 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
             voting_result=voting_result,  # Add voting results
             graph_context_summary=graph_context_summary,  # Add graph context summary
             tool_executions=self.tool_execution_history,  # Add tool execution history
+            structured_findings=structured_findings,  # Add structured findings
+            chain_id=request.chain_id,
+            chain_step=request.chain_step,
         )
 
         # Add convergence info if available
@@ -1369,6 +1477,25 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                     request.question, result
                 )
                 logger.info(f"Stored deliberation in decision graph: {decision_id}")
+
+                # Store findings in debt tracker if structured findings available
+                if structured_findings and structured_findings.findings:
+                    try:
+                        from decision_graph.debt_tracker import DebtTracker
+                        tracker = DebtTracker(self.graph_integration.storage)
+                        debt_items = tracker.store_findings(decision_id, structured_findings.findings)
+                        regressions = [d for d in debt_items if d.status == "recurring"]
+                        if regressions:
+                            logger.warning(
+                                f"Regression Sentinel: {len(regressions)} recurring issue(s) detected"
+                            )
+                        logger.info(
+                            f"Stored {len(debt_items)} findings in debt tracker "
+                            f"({len(regressions)} regressions)"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Error storing findings in debt tracker: {e}")
+
             except Exception as e:
                 logger.warning(f"Error storing deliberation in graph: {e}")
 

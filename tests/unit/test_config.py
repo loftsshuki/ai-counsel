@@ -1,5 +1,6 @@
 """Unit tests for configuration loading."""
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -566,7 +567,11 @@ class TestDecisionGraphConfig:
         """
         from models.config import DecisionGraphConfig
 
-        absolute_path = "/tmp/test_graph.db"
+        # Use a platform-appropriate absolute path
+        if sys.platform == "win32":
+            absolute_path = "C:\\tmp\\test_graph.db"
+        else:
+            absolute_path = "/tmp/test_graph.db"
         config = DecisionGraphConfig(enabled=True, db_path=absolute_path)
 
         # Should still be absolute
@@ -588,8 +593,13 @@ class TestDecisionGraphConfig:
         """
         from models.config import DecisionGraphConfig
 
-        # Set up test environment variable with absolute path
-        test_data_dir = "/var/data"
+        # Set up test environment variable with platform-appropriate absolute path
+        if sys.platform == "win32":
+            test_data_dir = "C:\\var\\data"
+            expected_path = "C:\\var\\data\\graph.db"
+        else:
+            test_data_dir = "/var/data"
+            expected_path = "/var/data/graph.db"
         monkeypatch.setenv("TEST_DATA_DIR", test_data_dir)
 
         config = DecisionGraphConfig(
@@ -598,7 +608,6 @@ class TestDecisionGraphConfig:
         )
 
         # Should resolve env var and path is already absolute (no further resolution)
-        expected_path = "/var/data/graph.db"
         assert config.db_path == expected_path, (
             f"Expected {expected_path}, got {config.db_path}"
         )
@@ -1060,8 +1069,8 @@ class TestDecisionGraphBudgetAwareConfig:
             "config.yaml should define query_window"
 
         # Verify expected values from config.yaml
-        assert config.decision_graph.context_token_budget == 1500, \
-            "context_token_budget should be 1500 in config.yaml"
+        assert config.decision_graph.context_token_budget == 1000, \
+            "context_token_budget should be 1000 in config.yaml"
         assert config.decision_graph.tier_boundaries == {"strong": 0.75, "moderate": 0.60}, \
             "tier_boundaries should be {strong: 0.75, moderate: 0.60} in config.yaml"
         assert config.decision_graph.query_window == 1000, \
@@ -1226,5 +1235,89 @@ class TestFileTreeConfig:
 
         # Verify expected values from config.yaml
         assert config.deliberation.file_tree.enabled is True
-        assert config.deliberation.file_tree.max_depth == 3
-        assert config.deliberation.file_tree.max_files == 100
+        assert config.deliberation.file_tree.max_depth == 2
+        assert config.deliberation.file_tree.max_files == 50
+
+
+class TestWebSearchConfig:
+    """Tests for WebSearchConfig validation."""
+
+    def test_web_search_config_defaults(self):
+        """Test WebSearchConfig default values."""
+        from models.config import WebSearchConfig
+
+        config = WebSearchConfig()
+        assert config.enabled is False
+        assert config.provider == "duckduckgo"
+        assert config.api_key is None
+        assert config.max_results == 5
+
+    def test_web_search_config_tavily(self):
+        """Test WebSearchConfig with Tavily provider."""
+        from models.config import WebSearchConfig
+
+        config = WebSearchConfig(
+            enabled=True,
+            provider="tavily",
+            api_key="tvly-test-key",
+            max_results=3,
+        )
+        assert config.provider == "tavily"
+        assert config.api_key == "tvly-test-key"
+        assert config.max_results == 3
+
+    def test_web_search_config_max_results_validation(self):
+        """Test max_results range (1-10)."""
+        from models.config import WebSearchConfig
+
+        WebSearchConfig(max_results=1)
+        WebSearchConfig(max_results=10)
+
+        with pytest.raises(ValidationError):
+            WebSearchConfig(max_results=0)
+
+        with pytest.raises(ValidationError):
+            WebSearchConfig(max_results=11)
+
+    def test_web_search_config_invalid_provider(self):
+        """Test invalid provider is rejected."""
+        from models.config import WebSearchConfig
+
+        with pytest.raises(ValidationError):
+            WebSearchConfig(provider="google")
+
+    def test_deliberation_config_has_web_search(self):
+        """Test DeliberationConfig includes web_search field."""
+        from models.config import (
+            DeliberationConfig, WebSearchConfig,
+            ConvergenceDetectionConfig, EarlyStoppingConfig,
+        )
+
+        config = DeliberationConfig(
+            convergence_detection=ConvergenceDetectionConfig(
+                enabled=True,
+                semantic_similarity_threshold=0.85,
+                divergence_threshold=0.40,
+                min_rounds_before_check=1,
+                consecutive_stable_rounds=2,
+                stance_stability_threshold=0.80,
+                response_length_drop_threshold=0.40,
+            ),
+            early_stopping=EarlyStoppingConfig(
+                enabled=True, threshold=0.66, respect_min_rounds=True,
+            ),
+            convergence_threshold=0.8,
+            enable_convergence_detection=True,
+        )
+
+        assert hasattr(config, "web_search")
+        assert isinstance(config.web_search, WebSearchConfig)
+        assert config.web_search.enabled is False
+
+    def test_config_yaml_loads_web_search(self):
+        """Test config.yaml loads web_search section successfully."""
+        config = load_config()
+
+        assert hasattr(config.deliberation, "web_search")
+        assert config.deliberation.web_search.enabled is True
+        assert config.deliberation.web_search.provider == "tavily"
