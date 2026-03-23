@@ -408,11 +408,29 @@
   </div>
 </div>
 
-<!-- STATUS + DEBATE (hidden until active) -->
-<div id="statusStrip" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;background:var(--surface);border-top:1px solid var(--border);padding:.6rem 2rem;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted);text-align:center">
-  <span id="sText">Deliberating...</span>
+<!-- STATUS BAR (fixed bottom) -->
+<div id="statusStrip" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;background:var(--surface);border-top:1px solid var(--border);padding:0">
+  <!-- Progress bar -->
+  <div id="sProgress" style="height:3px;background:var(--green);width:0%;transition:width 600ms ease;border-radius:0 2px 0 0"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 2rem">
+    <div style="display:flex;align-items:center;gap:.8rem">
+      <div id="sSpinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite"></div>
+      <span id="sText" style="font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">Deliberating...</span>
+    </div>
+    <div id="sPhase" style="display:flex;gap:.4rem;font-family:var(--fm);font-size:.55rem"></div>
+    <div id="sTimer" style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted);font-variant-numeric:tabular-nums">0:00</div>
+  </div>
 </div>
-<div class="debate" id="debate" style="display:none;max-width:720px;margin:0 auto;padding:2rem">
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<!-- ACTIVITY FEED + DEBATE -->
+<div id="debate" style="display:none;max-width:760px;margin:0 auto;padding:2rem 2rem 5rem">
+  <!-- Live activity log -->
+  <div id="activityLog" style="margin-bottom:2rem"></div>
+  <!-- Model responses -->
+  <div id="responses"></div>
+  <!-- Summary section -->
+  <div id="summaryArea" style="display:none"></div>
 </div>
 
 <script>
@@ -572,19 +590,156 @@ function go() {
   if(!q.trim())return;
   document.getElementById('statusStrip').style.display='block';
   document.getElementById('debate').style.display='block';
-  document.getElementById('debate').innerHTML='';
+  document.getElementById('activityLog').innerHTML='';
+  document.getElementById('responses').innerHTML='';
+  document.getElementById('summaryArea').style.display='none';
+  document.getElementById('summaryArea').innerHTML='';
+  document.getElementById('sProgress').style.width='0%';
+  document.getElementById('sProgress').style.background='var(--green)';
+  document.getElementById('sSpinner').style.animation='spin .8s linear infinite';
+  document.getElementById('sSpinner').style.borderColor='';
+  document.getElementById('sSpinner').style.borderTopColor='var(--green)';
   document.getElementById('goBtn').disabled=true;
-  document.getElementById('sText').textContent='Deliberating...';
+  document.getElementById('sText').textContent='Assembling council...';
+  renderPhases('starting');
 
   fetch('/api/deliberate/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,panel:document.getElementById('panel').value,rounds:2,working_directory:'.',custom_models:selModels.length>=2?selModels:null})}).then(r=>{
     const rd=r.body.getReader();const dc=new TextDecoder();let buf='';
     function read(){rd.read().then(({done,value})=>{if(done){fin();return;}buf+=dc.decode(value,{stream:true});const evts=buf.split('\n\n');buf=evts.pop();for(const bl of evts){const ls=bl.split('\n');let t='',d='';for(const l of ls){if(l.startsWith('event: '))t=l.slice(7);else if(l.startsWith('data: '))d=l.slice(6);}if(t&&d)try{ev(t,JSON.parse(d));}catch(e){}}read();});}read();
   }).catch(()=>fin());
 }
-function ev(t,d) {
-  if(t==='response'){const s=document.getElementById('debate');const e=document.createElement('div');e.style.cssText='margin-bottom:2rem;opacity:0;transform:translateY(10px);animation:up 400ms cubic-bezier(.16,1,.3,1) forwards';e.innerHTML=`<div style="font-family:var(--fd);font-size:1.1rem;font-weight:600;color:var(--cream)">${esc(d.participant)} <span style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted);margin-left:.5rem">R${d.round}</span></div><div style="font-size:.85rem;line-height:1.8;color:var(--cream-dim);max-width:60ch;white-space:pre-wrap;margin-top:.4rem;max-height:350px;overflow-y:auto">${esc(d.response)}</div><div style="width:30px;height:1px;background:var(--border);margin-top:1.5rem"></div>`;s.appendChild(e);e.scrollIntoView({behavior:'smooth',block:'end'});}
-  if(t==='complete'){document.getElementById('sText').textContent='Complete \u00b7 '+d.rounds_completed+' rounds';fin();}
-  if(t==='error'){document.getElementById('sText').textContent='Error';fin();}
+let startTime=0;let timerInterval=null;let totalParticipants=0;let responsesReceived=0;let currentRound=0;let totalRounds=2;
+
+function startTimer(){
+  startTime=Date.now();
+  timerInterval=setInterval(()=>{
+    const s=Math.floor((Date.now()-startTime)/1000);
+    document.getElementById('sTimer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  },1000);
+}
+function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}}
+
+function addActivity(icon,text,type){
+  const log=document.getElementById('activityLog');
+  const el=document.createElement('div');
+  const colors={info:'var(--cream-muted)',model:'var(--green)',convergence:'var(--gold)',summary:'var(--green-dim)',error:'var(--red)'};
+  el.style.cssText=`display:flex;align-items:center;gap:.6rem;padding:.35rem 0;font-family:var(--fm);font-size:.65rem;color:${colors[type]||'var(--cream-muted)'};opacity:0;transform:translateY(5px);animation:up 300ms ease forwards`;
+  el.innerHTML=`<span style="width:16px;text-align:center;flex-shrink:0">${icon}</span><span>${text}</span><span style="margin-left:auto;font-size:.55rem;color:var(--cream-muted)">${new Date().toLocaleTimeString()}</span>`;
+  log.appendChild(el);
+}
+
+function updateProgress(){
+  const roundProgress=(currentRound-1)/totalRounds;
+  const responseProgress=totalParticipants>0?responsesReceived/(totalParticipants*totalRounds):0;
+  const pct=Math.min(95,Math.round((roundProgress*50+responseProgress*50)*100));
+  document.getElementById('sProgress').style.width=pct+'%';
+}
+
+function renderPhases(active){
+  const phases=['Starting','Round 1','Round 2','Convergence','Summary'];
+  const ph=document.getElementById('sPhase');
+  ph.innerHTML=phases.map((p,i)=>{
+    const isActive=p.toLowerCase().includes(active.toLowerCase())||
+      (active==='deliberating'&&p.includes('Round')&&parseInt(p.split(' ')[1])===currentRound);
+    const isDone=i<phases.findIndex(x=>x.toLowerCase().includes(active.toLowerCase()));
+    const color=isActive?'var(--green)':isDone?'var(--green-dim)':'var(--border)';
+    const bg=isActive?'oklch(95% .02 155)':'transparent';
+    return `<span style="padding:.15rem .4rem;border-radius:3px;border:1px solid ${color};color:${color};background:${bg}">${p}</span>`;
+  }).join('');
+}
+
+function ev(t,d){
+  if(t==='status'){
+    if(d.phase==='starting'){
+      totalParticipants=d.participants?d.participants.length:0;
+      totalRounds=d.rounds||2;
+      responsesReceived=0;currentRound=0;
+      startTimer();
+      const names=d.participants?d.participants.map(p=>p.split('@')[0]).join(', '):'';
+      document.getElementById('sText').textContent=`Council assembling: ${totalParticipants} models, ${totalRounds} rounds`;
+      addActivity('\u2694\ufe0f',`Council convened: ${names}`,'info');
+      addActivity('\u2753',`Question: "${d.question}"`,'info');
+      renderPhases('starting');
+    }
+    if(d.phase==='deliberating'){
+      document.getElementById('sText').textContent='Models are deliberating...';
+      renderPhases('round 1');
+    }
+  }
+
+  if(t==='response'){
+    const prevRound=currentRound;
+    currentRound=d.round;
+    responsesReceived++;
+    if(currentRound>prevRound){
+      addActivity('\ud83d\udd04',`Round ${currentRound} started`,'info');
+      renderPhases('round '+currentRound);
+    }
+    const modelName=d.participant.split('@')[0]||d.participant;
+    document.getElementById('sText').textContent=`Round ${d.round}: ${modelName} responded`;
+    addActivity('\ud83e\udde0',`${modelName} responded (Round ${d.round})`,'model');
+    updateProgress();
+
+    // Render response card
+    const s=document.getElementById('responses');
+    const e=document.createElement('div');
+    e.style.cssText='margin-bottom:2rem;opacity:0;transform:translateY(10px);animation:up 400ms cubic-bezier(.16,1,.3,1) forwards;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;';
+    e.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem"><div style="font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--cream)">${esc(modelName)}</div><div style="display:flex;gap:.4rem"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">Round ${d.round}</span></div></div><div style="font-family:var(--fm);font-size:.8rem;line-height:1.8;color:var(--cream-dim);white-space:pre-wrap;max-height:400px;overflow-y:auto">${esc(d.response)}</div>`;
+    s.appendChild(e);
+    e.scrollIntoView({behavior:'smooth',block:'end'});
+  }
+
+  if(t==='convergence'){
+    renderPhases('convergence');
+    const pct=d.similarity?Math.round(d.similarity*100):0;
+    document.getElementById('sText').textContent=`Convergence: ${pct}% agreement — ${d.status}`;
+    addActivity('\ud83c\udfaf',`Convergence: ${pct}% similarity (${d.status})`,'convergence');
+    document.getElementById('sProgress').style.width='85%';
+  }
+
+  if(t==='summary'){
+    renderPhases('summary');
+    document.getElementById('sText').textContent='Generating executive summary...';
+    addActivity('\ud83d\udcdd','Executive summary generated','summary');
+    document.getElementById('sProgress').style.width='95%';
+
+    const area=document.getElementById('summaryArea');
+    area.style.display='block';
+    area.innerHTML=`
+      <div style="margin-top:2rem;border-top:2px solid var(--green);padding-top:2rem;opacity:0;transform:translateY(10px);animation:up 400ms ease forwards">
+        <div style="font-family:var(--fd);font-size:1.4rem;font-weight:700;color:var(--cream);margin-bottom:1rem">Council Verdict</div>
+        ${d.executive_summary?`<div style="font-family:var(--fm);font-size:.85rem;line-height:1.8;color:var(--cream-dim);margin-bottom:1.5rem;padding:1rem;background:var(--surface);border-radius:8px;border-left:3px solid var(--green)">${esc(d.executive_summary)}</div>`:''}
+        ${d.recommendation?`<div style="margin-bottom:1.5rem"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;color:var(--cream);margin-bottom:.4rem">Recommendation</div><div style="font-family:var(--fm);font-size:.8rem;line-height:1.7;color:var(--cream-dim)">${esc(d.recommendation)}</div></div>`:''}
+        ${d.key_agreements&&d.key_agreements.length?`<div style="margin-bottom:1rem"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;color:var(--green);margin-bottom:.4rem">Agreements</div>${d.key_agreements.map(a=>`<div style="font-family:var(--fm);font-size:.75rem;color:var(--cream-dim);padding:.3rem 0;padding-left:1rem;border-left:2px solid var(--green-dim)">${esc(a)}</div>`).join('')}</div>`:''}
+        ${d.key_disagreements&&d.key_disagreements.length?`<div><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;color:var(--gold);margin-bottom:.4rem">Disagreements</div>${d.key_disagreements.map(a=>`<div style="font-family:var(--fm);font-size:.75rem;color:var(--cream-dim);padding:.3rem 0;padding-left:1rem;border-left:2px solid var(--gold-dim)">${esc(a)}</div>`).join('')}</div>`:''}
+      </div>`;
+    area.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  if(t==='findings'){
+    addActivity('\ud83d\udd0d',`${d.findings_count} findings — Risk: ${d.risk_level} — Verdict: ${d.verdict}`,'convergence');
+  }
+
+  if(t==='complete'){
+    stopTimer();
+    document.getElementById('sProgress').style.width='100%';
+    document.getElementById('sSpinner').style.animation='none';
+    document.getElementById('sSpinner').style.borderColor='var(--green)';
+    const elapsed=Math.floor((Date.now()-startTime)/1000);
+    document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s`;
+    addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)`,'info');
+    renderPhases('summary');
+    fin();
+  }
+
+  if(t==='error'){
+    stopTimer();
+    document.getElementById('sText').textContent='Error: '+d.message;
+    document.getElementById('sProgress').style.background='var(--red)';
+    document.getElementById('sProgress').style.width='100%';
+    addActivity('\u274c','Error: '+d.message,'error');
+    fin();
+  }
 }
 function fin(){document.getElementById('goBtn').disabled=false;}
 function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
