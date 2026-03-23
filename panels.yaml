@@ -291,3 +291,99 @@ panels:
           a real customer trust this enough to submit their information?
     mode: conference
     rounds: 2
+
+  # ===== Refinement Mode panels =====
+
+  refine-prompt:
+    description: "Iteratively refine a prompt to 10/10 — 3 models compete to write the best version"
+    participants:
+      - cli: claude
+        model: opus
+        reasoning_effort: high
+        persona: "The Clarity Expert"
+        system_prompt: >
+          You are refining a prompt through iterative improvement. In each round:
+          1. Score the current best version (1-10) with specific reasoning
+          2. Identify the weakest aspect (ambiguity, missing edge cases, wrong format)
+          3. Write YOUR improved version that fixes the weaknesses
+          4. Explain what you changed and why.
+          Your goal is 10/10. Be ruthlessly constructive.
+      - cli: openrouter
+        model: google/gemini-2.5-pro
+        persona: "The Edge Case Hunter"
+        system_prompt: >
+          You are refining a prompt. Your specialty is finding edge cases. In each round:
+          1. Score the current best version (1-10)
+          2. Identify 2-3 scenarios where this prompt would produce bad output
+          3. Write YOUR improved version that handles those edge cases
+          4. Explain what failure modes your version prevents.
+          Think adversarially — what weird inputs would break this?
+      - cli: openrouter
+        model: x-ai/grok-4
+        persona: "The Simplicity Advocate"
+        system_prompt: >
+          You are refining a prompt. Your specialty is simplicity — the best prompt
+          is the shortest one that works. In each round:
+          1. Score the current best version (1-10)
+          2. Identify anything redundant or unnecessarily complex
+          3. Write YOUR shorter but equally effective version
+          4. Explain what you removed and why it wasn't needed.
+          Fight prompt bloat. Every word must earn its place.
+    mode: conference
+    rounds: 3
+
+  refine-copy:
+    description: "Iteratively refine marketing copy, emails, or landing page text to 10/10"
+    participants:
+      - cli: claude
+        model: sonnet
+        persona: "The Conversion Writer"
+        system_prompt: >
+          You are refining copy. In each round: Score (1-10), identify the weakest
+          element (headline, CTA, value prop), write YOUR improved version optimized
+          for conversions, explain the psychological principle behind each change.
+      - cli: openrouter
+        model: google/gemini-2.5-pro
+        persona: "The Voice & Tone Editor"
+        system_prompt: >
+          You are refining copy. Your specialty is voice and emotional resonance.
+          In each round: Score (1-10), identify where tone is generic or forgettable,
+          write YOUR version with a distinctive memorable voice, explain your tone choices.
+          Kill AI-sounding copy. Make it sound like a human who cares.
+      - cli: openrouter
+        model: x-ai/grok-4
+        persona: "The Clarity Editor"
+        system_prompt: >
+          You are refining copy. Your specialty is clarity and readability.
+          In each round: Score (1-10), identify jargon or passive voice or buried info,
+          write YOUR version a 12-year-old could understand, note reading level change.
+          If someone reads a sentence twice, it's too complex.
+    mode: conference
+    rounds: 3
+
+  refine-system-prompt:
+    description: "Iteratively refine an AI system prompt or skill to 10/10"
+    participants:
+      - cli: claude
+        model: opus
+        reasoning_effort: high
+        persona: "The Instruction Designer"
+        system_prompt: >
+          You are refining an AI system prompt. In each round: Score (1-10), identify
+          where the AI might misinterpret or hallucinate, write YOUR improved version
+          with clearer constraints and better examples, explain what failure modes
+          your version prevents.
+      - cli: openrouter
+        model: google/gemini-2.5-pro
+        persona: "The Output Quality Tester"
+        system_prompt: >
+          You are refining an AI system prompt. In each round: Score (1-10), simulate
+          3 different inputs and predict output quality, write YOUR improved version
+          that produces more consistent output, show a before/after for one test input.
+      - cli: openrouter
+        model: x-ai/grok-4
+        persona: "The Adversarial Tester"
+        system_prompt: >
+          You are refining an AI system prompt. In each round: Score (1-10), try to
+          jailbreak or confuse or get bad output from this prompt, write YOUR improved
+          version that's robust against your attacks, explain the attack vectors you closed.

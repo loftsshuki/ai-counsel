@@ -576,6 +576,148 @@
     font-size: 0.55rem;
   }
 
+  /* ===== REFINEMENT SECTION ===== */
+  .refine-section {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto 4rem;
+    padding: 0 2rem;
+    opacity: 0;
+    animation: fadeUp 600ms 1000ms var(--ease-out-expo) forwards;
+  }
+  .refine-section.hidden { display: none; }
+  .refine-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .refine-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green-400);
+    margin-bottom: 0.5rem;
+  }
+  .refine-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 600;
+    color: var(--cream-50);
+    margin-bottom: 0.5rem;
+  }
+  .refine-subtitle {
+    font-size: 0.9rem;
+    color: var(--cream-500);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  .refine-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .refine-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1.5rem;
+    background: oklch(16% 0.05 155 / 0.5);
+    backdrop-filter: blur(4px);
+    border: 1px solid oklch(35% 0.08 155 / 0.3);
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 250ms var(--ease-out-quart),
+                transform 200ms var(--ease-out-quart),
+                box-shadow 250ms var(--ease-out-quart);
+  }
+  .refine-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--green-400), var(--green-600));
+    opacity: 0.7;
+  }
+  .refine-card:hover {
+    border-color: var(--green-400);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px oklch(12% 0.04 155 / 0.5);
+  }
+  .refine-card-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--green-400);
+    opacity: 0.9;
+  }
+  .refine-card-body { }
+  .refine-card-name {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--cream-50);
+    margin-bottom: 0.25rem;
+  }
+  .refine-card-desc {
+    font-size: 0.82rem;
+    color: var(--cream-500);
+    line-height: 1.5;
+    font-weight: 300;
+  }
+  .refine-card-badge {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .refine-card-badge.pro {
+    background: oklch(40% 0.10 75 / 0.2);
+    color: oklch(78% 0.12 75);
+    border: 1px solid oklch(40% 0.08 75 / 0.3);
+  }
+  .refine-card-badge.available {
+    background: oklch(35% 0.08 155 / 0.25);
+    color: var(--green-300);
+    border: 1px solid oklch(35% 0.06 155 / 0.3);
+  }
+  .refine-cta {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border: 1px dashed oklch(35% 0.06 155 / 0.4);
+    border-radius: 8px;
+    background: oklch(13% 0.03 155 / 0.4);
+  }
+  .refine-cta-text {
+    font-size: 0.85rem;
+    color: var(--cream-500);
+    margin-bottom: 0.6rem;
+  }
+  .refine-cta-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--green-600), var(--green-500));
+    color: var(--cream-50);
+    border: none;
+    border-radius: 4px;
+    padding: 0.55rem 1.5rem;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: opacity 150ms;
+  }
+  .refine-cta-btn:hover { opacity: 0.9; }
+
   /* ===== STATUS BAR ===== */
   .status-bar {
     position: relative;
@@ -825,6 +967,20 @@
 
   <div class="categories" id="categories">
     <div id="catSections"></div>
+  </div>
+</section>
+
+<!-- REFINEMENT MODE SECTION -->
+<section class="refine-section" id="refineSection">
+  <div class="refine-header">
+    <div class="refine-eyebrow">Refinement Mode</div>
+    <div class="refine-title">From 5/10 to 10/10</div>
+    <p class="refine-subtitle">Paste your draft. Three AI models compete to write the best version, critique each other, and converge on a polished result.</p>
+  </div>
+  <div class="refine-grid" id="refineGrid"></div>
+  <div class="refine-cta">
+    <div class="refine-cta-text">Refinement Mode runs 3 premium models for 3 rounds — the most thorough improvement pipeline available.</div>
+    <button class="refine-cta-btn" onclick="document.getElementById('question').focus();window.scrollTo({top:0,behavior:'smooth'})">Unlock Pro &mdash; $29/mo</button>
   </div>
 </section>
 
@@ -1295,6 +1451,64 @@ startDeliberation = function() {
   }).catch(() => onComplete());
 };
 
+// ===== REFINEMENT CARDS =====
+const REFINE_CARDS = [
+  {
+    icon: IC.sparkle,
+    name: "Refine a Prompt",
+    desc: "Three models compete to write the best version of your prompt. Each round: score, critique, rewrite, improve. Converge on 10/10.",
+    panel: "refine-prompt",
+    question: "Refine this prompt to 10/10 quality. Here is my current draft:\n\n[PASTE YOUR PROMPT HERE]\n\nEach model should score it, identify weaknesses, and write an improved version.",
+    tier: "pro",
+  },
+  {
+    icon: IC.pen,
+    name: "Refine Marketing Copy",
+    desc: "Conversion writer, voice editor, and clarity editor compete to make your copy irresistible. Headlines, CTAs, value props — all refined.",
+    panel: "refine-copy",
+    question: "Refine this copy to 10/10 quality. Here is my current draft:\n\n[PASTE YOUR COPY HERE]\n\nEach model should score it, then write a better version optimized for their specialty.",
+    tier: "pro",
+  },
+  {
+    icon: IC.bot,
+    name: "Refine a System Prompt",
+    desc: "Instruction designer, output tester, and adversarial tester harden your system prompt against edge cases and failures.",
+    panel: "refine-system-prompt",
+    question: "Refine this system prompt to 10/10 quality. Here is my current version:\n\n[PASTE YOUR SYSTEM PROMPT HERE]\n\nEach model should score it, identify failure modes, and write an improved version.",
+    tier: "pro",
+  },
+];
+
+function renderRefineCards() {
+  const grid = document.getElementById('refineGrid');
+  REFINE_CARDS.forEach(card => {
+    const el = document.createElement('div');
+    el.className = 'refine-card';
+    const badgeClass = card.tier === 'pro' ? 'pro' : 'available';
+    const badgeText = card.tier === 'pro' ? 'PRO' : 'FREE';
+    el.innerHTML = `
+      <div class="refine-card-icon">${card.icon}</div>
+      <div class="refine-card-body">
+        <div class="refine-card-name">${card.name}</div>
+        <div class="refine-card-desc">${card.desc}</div>
+      </div>
+      <div class="refine-card-badge ${badgeClass}">${badgeText}</div>
+    `;
+    el.onclick = () => {
+      document.getElementById('question').value = card.question;
+      const sel = document.getElementById('panel');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === card.panel) { sel.selectedIndex = i; break; }
+      }
+      autoResize(document.getElementById('question'));
+      document.getElementById('question').focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    grid.appendChild(el);
+  });
+}
+
+renderRefineCards();
 renderCategories();
 loadPanels();
 loadModels();
