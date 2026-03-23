@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Counsel — Live Deliberation</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a25;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #8888a0;
+    --accent: #4ade80;
+    --accent-dim: #22c55e33;
+    --warning: #fbbf24;
+    --danger: #ef4444;
+    --info: #60a5fa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header .badge {
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+  /* Input Section */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .input-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+  .input-row:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.3rem; }
+  textarea, select, input[type=number] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+  textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  select { cursor: pointer; }
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Status Bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .status-dot.active { background: var(--accent); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Convergence Meter */
+  .convergence-meter {
+    flex: 1;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .convergence-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  /* Debate Feed */
+  .debate-feed { display: flex; flex-direction: column; gap: 1rem; }
+  .response-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .response-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8rem;
+  }
+  .participant-name { font-weight: 600; font-size: 0.9rem; }
+  .round-badge {
+    background: var(--surface2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .response-text {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Results Section */
+  .results-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    display: none;
+  }
+  .results-section.visible { display: block; }
+  .verdict {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .verdict.approve { color: var(--accent); }
+  .verdict.changes { color: var(--danger); }
+  .verdict.notes { color: var(--warning); }
+  .executive-summary {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .findings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+  }
+  .findings-table th, .findings-table td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .findings-table th { color: var(--text-dim); font-weight: 500; }
+  .severity-critical { color: var(--danger); font-weight: 600; }
+  .severity-high { color: var(--warning); font-weight: 600; }
+  .severity-medium { color: var(--info); }
+  .severity-low { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>AI Counsel</h1>
+  <span class="badge">LIVE</span>
+</div>
+
+<div class="container">
+  <div class="input-section">
+    <div class="input-row">
+      <div style="flex:1">
+        <label>Question</label>
+        <textarea id="question" rows="3" placeholder="What should the council deliberate on?">Review this codebase for quality, security, and architectural issues.</textarea>
+      </div>
+    </div>
+    <div class="input-row">
+      <div style="flex:1">
+        <label>Panel</label>
+        <select id="panel"></select>
+      </div>
+      <div>
+        <label>Rounds</label>
+        <input type="number" id="rounds" value="2" min="1" max="5" style="width:80px">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn" id="startBtn" onclick="startDeliberation()">Start Deliberation</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar" style="display:none">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Ready</span>
+    <div class="convergence-meter">
+      <div class="convergence-fill" id="convergenceFill"></div>
+    </div>
+    <span id="convergenceLabel" style="font-size:0.8rem;color:var(--text-dim)">0%</span>
+  </div>
+
+  <div class="debate-feed" id="debateFeed"></div>
+
+  <div class="results-section" id="resultsSection">
+    <div class="verdict" id="verdictText"></div>
+    <div id="summaryText"></div>
+    <div class="executive-summary" id="execSummary" style="display:none"></div>
+    <table class="findings-table" id="findingsTable" style="display:none">
+      <thead><tr><th>#</th><th>Severity</th><th>Category</th><th>Description</th></tr></thead>
+      <tbody id="findingsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let eventSource = null;
+
+async function loadPanels() {
+  try {
+    const resp = await fetch('/api/panels');
+    const panels = await resp.json();
+    const select = document.getElementById('panel');
+    for (const [name, info] of Object.entries(panels)) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = `${name} — ${info.description} (${info.participants} models, ${info.rounds} rounds)`;
+      select.appendChild(opt);
+    }
+  } catch(e) { console.error('Failed to load panels:', e); }
+}
+
+function startDeliberation() {
+  const question = document.getElementById('question').value;
+  const panel = document.getElementById('panel').value;
+  const rounds = parseInt(document.getElementById('rounds').value);
+
+  if (!question.trim()) return;
+
+  // Reset UI
+  document.getElementById('debateFeed').innerHTML = '';
+  document.getElementById('resultsSection').classList.remove('visible');
+  document.getElementById('statusBar').style.display = 'flex';
+  document.getElementById('statusDot').classList.add('active');
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('convergenceFill').style.width = '0%';
+  document.getElementById('convergenceLabel').textContent = '0%';
+
+  // Start SSE stream
+  const body = JSON.stringify({ question, panel, rounds, working_directory: '.' });
+
+  fetch('/api/deliberate/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body,
+  }).then(response => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    function read() {
+      reader.read().then(({ done, value }) => {
+        if (done) {
+          onComplete();
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from buffer
+        const events = buffer.split('\n\n');
+        buffer = events.pop(); // Keep incomplete event in buffer
+
+        for (const eventBlock of events) {
+          const lines = eventBlock.split('\n');
+          let eventType = '';
+          let eventData = '';
+          for (const line of lines) {
+            if (line.startsWith('event: ')) eventType = line.slice(7);
+            else if (line.startsWith('data: ')) eventData = line.slice(6);
+          }
+          if (eventType && eventData) {
+            try {
+              handleEvent(eventType, JSON.parse(eventData));
+            } catch(e) { console.error('Parse error:', e); }
+          }
+        }
+        read();
+      });
+    }
+    read();
+  }).catch(err => {
+    setStatus('Error: ' + err.message);
+    onComplete();
+  });
+}
+
+function handleEvent(type, data) {
+  switch(type) {
+    case 'status':
+      setStatus(data.phase === 'starting' ? `Starting with ${data.participants?.length || 0} models...` : 'Deliberating...');
+      break;
+    case 'response':
+      addResponse(data);
+      break;
+    case 'convergence':
+      updateConvergence(data);
+      break;
+    case 'summary':
+      showSummary(data);
+      break;
+    case 'findings':
+      showFindings(data);
+      break;
+    case 'complete':
+      setStatus(`Complete — ${data.rounds_completed} round(s)`);
+      onComplete();
+      break;
+    case 'error':
+      setStatus('Error: ' + data.message);
+      onComplete();
+      break;
+  }
+}
+
+function setStatus(text) {
+  document.getElementById('statusText').textContent = text;
+}
+
+function addResponse(data) {
+  const feed = document.getElementById('debateFeed');
+  const card = document.createElement('div');
+  card.className = 'response-card';
+  card.innerHTML = `
+    <div class="response-header">
+      <span class="participant-name">${escapeHtml(data.participant)}</span>
+      <span class="round-badge">Round ${data.round}</span>
+    </div>
+    <div class="response-text">${escapeHtml(data.response)}</div>
+  `;
+  feed.appendChild(card);
+  card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function updateConvergence(data) {
+  const pct = Math.round(data.similarity * 100);
+  document.getElementById('convergenceFill').style.width = pct + '%';
+  document.getElementById('convergenceLabel').textContent = pct + '% — ' + data.status;
+}
+
+function showSummary(data) {
+  const section = document.getElementById('resultsSection');
+  section.classList.add('visible');
+  document.getElementById('summaryText').textContent = data.consensus;
+
+  if (data.executive_summary) {
+    const exec = document.getElementById('execSummary');
+    exec.style.display = 'block';
+    exec.textContent = data.executive_summary;
+  }
+}
+
+function showFindings(data) {
+  const section = document.getElementById('resultsSection');
+  section.classList.add('visible');
+
+  const verdict = document.getElementById('verdictText');
+  verdict.textContent = `${data.verdict} — Risk: ${data.risk_level} — ${data.findings_count} finding(s)`;
+  verdict.className = 'verdict ' + (
+    data.verdict === 'APPROVE' ? 'approve' :
+    data.verdict === 'REQUEST_CHANGES' ? 'changes' : 'notes'
+  );
+
+  if (data.findings && data.findings.length > 0) {
+    const table = document.getElementById('findingsTable');
+    table.style.display = 'table';
+    const tbody = document.getElementById('findingsBody');
+    tbody.innerHTML = '';
+    data.findings.forEach((f, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td class="severity-${f.severity}">${f.severity}</td>
+        <td>${f.category}</td>
+        <td>${escapeHtml(f.description)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function onComplete() {
+  document.getElementById('statusDot').classList.remove('active');
+  document.getElementById('startBtn').disabled = false;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Initialize
+loadPanels();
+</script>
+</body>
+</html>
