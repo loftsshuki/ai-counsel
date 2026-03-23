@@ -172,9 +172,9 @@
     font-weight: 300;
     color: var(--cream-500);
     text-align: center;
-    max-width: 480px;
-    line-height: 1.7;
-    margin-bottom: 3rem;
+    max-width: 520px;
+    line-height: 1.8;
+    margin-bottom: 3.5rem;
     opacity: 0;
     animation: fadeUp 600ms 500ms var(--ease-out-expo) forwards;
   }
@@ -256,6 +256,161 @@
   .search-btn:hover { background: var(--green-500); }
   .search-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+  /* ===== MODEL PICKER ===== */
+  .picker-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--cream-500);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 0.35rem 0.5rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: border-color 200ms, color 200ms;
+  }
+  .picker-toggle:hover { border-color: var(--green-600); color: var(--cream-200); }
+  .picker-toggle.active { border-color: var(--green-400); color: var(--green-300); }
+
+  .model-picker-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: oklch(8% 0.02 155 / 0.85);
+    backdrop-filter: blur(8px);
+  }
+  .model-picker-overlay.open { display: flex; align-items: center; justify-content: center; }
+
+  .model-picker {
+    background: var(--green-900);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 680px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 2rem;
+    animation: fadeUp 300ms var(--ease-out-expo);
+  }
+  .picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .picker-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--cream-100);
+  }
+  .picker-close {
+    background: none;
+    border: none;
+    color: var(--cream-700);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+  }
+  .picker-close:hover { color: var(--cream-300); }
+  .picker-selected-count {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+  }
+  .picker-selected-count strong { color: var(--accent); }
+
+  .picker-group { margin-bottom: 1.5rem; }
+  .picker-group-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+  }
+  .picker-models {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem;
+  }
+  .model-card {
+    background: oklch(14% 0.035 155 / 0.6);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0.7rem 0.85rem;
+    cursor: pointer;
+    transition: border-color 200ms, background 200ms;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .model-card:hover { border-color: var(--green-600); background: oklch(17% 0.04 155 / 0.7); }
+  .model-card.selected { border-color: var(--green-400); background: oklch(20% 0.06 155 / 0.5); }
+  .model-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--cream-200);
+  }
+  .model-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .tier-badge {
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.35rem;
+    border-radius: 2px;
+  }
+  .tier-free { background: oklch(40% 0.01 0 / 0.3); color: oklch(70% 0.01 0); }
+  .tier-balanced, .tier-speed, .tier-general { background: oklch(40% 0.08 250 / 0.2); color: oklch(70% 0.10 250); }
+  .tier-premium { background: oklch(35% 0.08 155 / 0.3); color: var(--green-300); }
+  .tier-flagship { background: oklch(40% 0.10 75 / 0.25); color: oklch(78% 0.12 75); }
+  .tier-reasoning { background: oklch(35% 0.10 300 / 0.25); color: oklch(72% 0.12 300); }
+  .model-id {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: var(--text-muted);
+  }
+  .picker-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .picker-btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--cream-500);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+  }
+  .picker-btn-primary {
+    background: var(--green-600);
+    border: none;
+    border-radius: 4px;
+    color: var(--cream-50);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+  }
+  .picker-btn-primary:hover { background: var(--green-500); }
+  .picker-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
   /* ===== CATEGORY CARDS ===== */
   .categories {
     width: 100%;
@@ -266,12 +421,24 @@
   }
   .categories.hidden { display: none; }
   .cat-label {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--cream-200);
     margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .cat-label::before {
+    content: '';
+    width: 3px;
+    height: 18px;
+    background: var(--green-500);
+    border-radius: 1px;
+    flex-shrink: 0;
   }
   .cat-grid {
     display: grid;
@@ -650,6 +817,7 @@
       <textarea class="search-input" id="question" rows="1" placeholder="Ask the council anything..." oninput="autoResize(this)"></textarea>
       <div class="search-controls">
         <select class="panel-select" id="panel"></select>
+        <button class="picker-toggle" id="pickerToggle" onclick="openModelPicker()">Models</button>
         <button class="search-btn" id="startBtn" onclick="startDeliberation()">Deliberate</button>
       </div>
     </div>
@@ -659,6 +827,22 @@
     <div id="catSections"></div>
   </div>
 </section>
+
+<!-- MODEL PICKER MODAL -->
+<div class="model-picker-overlay" id="pickerOverlay" onclick="if(event.target===this)closeModelPicker()">
+  <div class="model-picker">
+    <div class="picker-header">
+      <div class="picker-title">Build Your Council</div>
+      <button class="picker-close" onclick="closeModelPicker()">&times;</button>
+    </div>
+    <div class="picker-selected-count">Select <strong>2-5 models</strong> to form your council. They'll debate your question across multiple rounds.</div>
+    <div id="pickerBody"></div>
+    <div class="picker-actions">
+      <button class="picker-btn-secondary" onclick="clearModelSelection()">Clear All</button>
+      <button class="picker-btn-primary" id="pickerConfirm" onclick="confirmModelSelection()" disabled>Use Selected Models</button>
+    </div>
+  </div>
+</div>
 
 <!-- STATUS BAR -->
 <div class="status-bar" id="statusBar">
@@ -792,7 +976,7 @@ function renderCategories() {
 
   SECTIONS.forEach(section => {
     const wrapper = document.createElement('div');
-    wrapper.style.marginBottom = '2.5rem';
+    wrapper.style.marginBottom = '3rem';
 
     const label = document.createElement('div');
     label.className = 'cat-label';
@@ -862,54 +1046,7 @@ async function loadPanels() {
   } catch(e) {}
 }
 
-function startDeliberation() {
-  const question = document.getElementById('question').value;
-  const panel = document.getElementById('panel').value;
-  if (!question.trim()) return;
-
-  // Compact hero
-  document.getElementById('hero').classList.add('compact');
-  document.getElementById('categories').classList.add('hidden');
-  document.getElementById('statusBar').classList.add('visible');
-  document.getElementById('debateSection').classList.add('visible');
-  document.getElementById('debateSection').innerHTML = '';
-  document.getElementById('resultsSection').classList.remove('visible');
-  document.getElementById('resultsSection').style.display = 'none';
-  document.getElementById('convFill').style.width = '0%';
-  document.getElementById('convLabel').textContent = '0%';
-  document.getElementById('startBtn').disabled = true;
-
-  const body = JSON.stringify({ question, panel, rounds: 2, working_directory: '.' });
-
-  fetch('/api/deliberate/stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  }).then(response => {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { onComplete(); return; }
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split('\n\n');
-        buffer = events.pop();
-        for (const block of events) {
-          const lines = block.split('\n');
-          let type = '', data = '';
-          for (const ln of lines) {
-            if (ln.startsWith('event: ')) type = ln.slice(7);
-            else if (ln.startsWith('data: ')) data = ln.slice(6);
-          }
-          if (type && data) { try { handleEvent(type, JSON.parse(data)); } catch(e) {} }
-        }
-        read();
-      });
-    }
-    read();
-  }).catch(() => onComplete());
-}
+// startDeliberation is defined in the model picker section below
 
 function handleEvent(type, data) {
   switch(type) {
@@ -993,8 +1130,175 @@ function onComplete() {
 
 function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
+// ===== MODEL PICKER =====
+let allModels = {};
+let selectedModels = [];
+
+async function loadModels() {
+  try {
+    const resp = await fetch('/api/models');
+    allModels = await resp.json();
+  } catch(e) { console.error('Failed to load models:', e); }
+}
+
+function openModelPicker() {
+  renderModelPicker();
+  document.getElementById('pickerOverlay').classList.add('open');
+}
+
+function closeModelPicker() {
+  document.getElementById('pickerOverlay').classList.remove('open');
+}
+
+function renderModelPicker() {
+  const body = document.getElementById('pickerBody');
+  body.innerHTML = '';
+
+  const tierOrder = ['flagship', 'premium', 'reasoning', 'balanced', 'general', 'speed', 'free', 'free-fast', 'open-source', 'coding'];
+
+  for (const [adapter, models] of Object.entries(allModels)) {
+    const group = document.createElement('div');
+    group.className = 'picker-group';
+
+    const label = document.createElement('div');
+    label.className = 'picker-group-label';
+    label.textContent = adapter;
+    group.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'picker-models';
+
+    // Sort by tier importance
+    const sorted = [...models].sort((a, b) => {
+      const ai = tierOrder.indexOf(a.tier);
+      const bi = tierOrder.indexOf(b.tier);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+
+    for (const m of sorted) {
+      const card = document.createElement('div');
+      card.className = 'model-card' + (selectedModels.some(s => s.id === m.id && s.adapter === adapter) ? ' selected' : '');
+      card.dataset.id = m.id;
+      card.dataset.adapter = adapter;
+
+      const tierClass = 'tier-' + (m.tier || 'balanced').split('-')[0];
+      card.innerHTML = `
+        <div class="model-name">${esc(m.label)}</div>
+        <div class="model-meta">
+          <span class="tier-badge ${tierClass}">${m.tier}</span>
+        </div>
+        <div class="model-id">${esc(m.id)}</div>
+      `;
+
+      card.onclick = () => toggleModel(adapter, m, card);
+      grid.appendChild(card);
+    }
+
+    group.appendChild(grid);
+    body.appendChild(group);
+  }
+}
+
+function toggleModel(adapter, model, card) {
+  const idx = selectedModels.findIndex(s => s.id === model.id && s.adapter === adapter);
+  if (idx >= 0) {
+    selectedModels.splice(idx, 1);
+    card.classList.remove('selected');
+  } else if (selectedModels.length < 5) {
+    selectedModels.push({ id: model.id, adapter, label: model.label });
+    card.classList.add('selected');
+  }
+  updatePickerState();
+}
+
+function updatePickerState() {
+  const btn = document.getElementById('pickerConfirm');
+  const count = selectedModels.length;
+  btn.disabled = count < 2;
+  btn.textContent = count === 0 ? 'Use Selected Models' : `Use ${count} Model${count !== 1 ? 's' : ''}`;
+
+  const toggle = document.getElementById('pickerToggle');
+  if (count > 0) {
+    toggle.classList.add('active');
+    toggle.textContent = `${count} Models`;
+  } else {
+    toggle.classList.remove('active');
+    toggle.textContent = 'Models';
+  }
+}
+
+function clearModelSelection() {
+  selectedModels = [];
+  document.querySelectorAll('.model-card.selected').forEach(c => c.classList.remove('selected'));
+  updatePickerState();
+}
+
+function confirmModelSelection() {
+  closeModelPicker();
+  updatePickerState();
+}
+
+// Update startDeliberation to pass custom models
+const _origStart = startDeliberation;
+startDeliberation = function() {
+  const question = document.getElementById('question').value;
+  const panel = document.getElementById('panel').value;
+  const rounds = parseInt(document.getElementById('rounds').value);
+  if (!question.trim()) return;
+
+  // Reset UI
+  const feed = document.getElementById('feed');
+  if (feed) feed.innerHTML = '';
+  document.getElementById('debateSection').innerHTML = '';
+  document.getElementById('debateSection').classList.add('visible');
+  document.getElementById('resultsSection').classList.remove('visible');
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('hero').classList.add('compact');
+  document.getElementById('categories').classList.add('hidden');
+  document.getElementById('statusBar').classList.add('visible');
+  document.getElementById('convFill').style.width = '0%';
+  document.getElementById('convLabel').textContent = '0%';
+  document.getElementById('statusBar').querySelector('.status-dot-sm').style.animationPlayState = 'running';
+  document.getElementById('startBtn').disabled = true;
+
+  const bodyData = {
+    question, panel, rounds, working_directory: '.',
+    custom_models: selectedModels.length >= 2 ? selectedModels : null,
+  };
+
+  fetch('/api/deliberate/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bodyData),
+  }).then(response => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    function read() {
+      reader.read().then(({ done, value }) => {
+        if (done) { onComplete(); return; }
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop();
+        for (const block of events) {
+          const lines = block.split('\n');
+          let type = '', data = '';
+          for (const ln of lines) {
+            if (ln.startsWith('event: ')) type = ln.slice(7);
+            else if (ln.startsWith('data: ')) data = ln.slice(6);
+          }
+          if (type && data) { try { handleEvent(type, JSON.parse(data)); } catch(e) {} }
+        }
+        read();
+      });
+    }
+    read();
+  }).catch(() => onComplete());
+};
+
 renderCategories();
 loadPanels();
+loadModels();
 </script>
 </body>
 </html>

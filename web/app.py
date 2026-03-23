@@ -82,6 +82,7 @@ class WebDeliberateRequest(BaseModel):
     panel: Optional[str] = "quick-check"
     rounds: int = 2
     working_directory: str = "."
+    custom_models: Optional[list] = None  # For custom council mode
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -91,6 +92,31 @@ async def index():
     if html_path.exists():
         return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
     return HTMLResponse(content="<h1>AI Counsel</h1><p>index.html not found</p>")
+
+
+@app.get("/api/models")
+async def list_models():
+    """List available models grouped by adapter with tier info."""
+    if not config or not config.model_registry:
+        return {}
+
+    result = {}
+    for adapter_name, models in config.model_registry.items():
+        adapter_models = []
+        for m in models:
+            if not m.enabled:
+                continue
+            adapter_models.append({
+                "id": m.id,
+                "label": m.label,
+                "tier": m.tier,
+                "default": getattr(m, "default", False),
+                "adapter": adapter_name,
+            })
+        if adapter_models:
+            result[adapter_name] = adapter_models
+
+    return result
 
 
 @app.get("/api/panels")
@@ -127,8 +153,12 @@ async def deliberate_stream(request: WebDeliberateRequest):
 
     async def event_stream() -> AsyncGenerator[str, None]:
         try:
-            # Resolve panel
-            if request.panel and request.panel in panels_config:
+            # Custom models override panel selection
+            if request.custom_models and len(request.custom_models) >= 2:
+                participants = [Participant(cli=m["adapter"], model=m["id"]) for m in request.custom_models]
+                mode = "conference" if len(participants) > 2 else "quick"
+                rounds = request.rounds
+            elif request.panel and request.panel in panels_config:
                 panel = panels_config[request.panel]
                 participants = [Participant(**p) for p in panel["participants"]]
                 mode = panel.get("mode", "quick")
