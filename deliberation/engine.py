@@ -474,6 +474,42 @@ The following files are available in the working directory:
 
         return responses
 
+    def _get_chain_context(self, chain_id: str, current_step: int) -> str:
+        """
+        Get context from previous chain step's deliberation.
+
+        Searches the decision graph for the previous step in this chain
+        and formats its summary + findings as context.
+        """
+        if not self.graph_integration:
+            return ""
+
+        try:
+            # Search for previous chain step in decision graph
+            all_decisions = self.graph_integration.storage.get_all_decisions(limit=50)
+            prev_step = current_step - 1
+
+            for decision in all_decisions:
+                metadata = decision.metadata or {}
+                if metadata.get("chain_id") == chain_id and metadata.get("chain_step") == prev_step:
+                    context_parts = [
+                        f"## Previous Chain Step (Step {prev_step})",
+                        f"**Question:** {decision.question}",
+                        f"**Consensus:** {decision.consensus}",
+                    ]
+                    if decision.winning_option:
+                        context_parts.append(f"**Winning Option:** {decision.winning_option}")
+                    context_parts.append(
+                        f"\nUse the above context from the previous review step to inform your analysis."
+                    )
+                    return "\n".join(context_parts)
+
+            logger.debug(f"No previous chain step found for chain {chain_id} step {prev_step}")
+            return ""
+        except Exception as e:
+            logger.warning(f"Error retrieving chain context: {e}")
+            return ""
+
     def _truncate_output(
         self, output: Optional[str], max_chars: int = 1000
     ) -> Optional[str]:
@@ -1098,6 +1134,14 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                 logger.warning(f"Error retrieving graph context: {e}")
                 graph_context = ""
 
+        # Inject chain context if this is a chained deliberation (step > 1)
+        chain_context = ""
+        if request.chain_id and request.chain_step and request.chain_step > 1:
+            chain_context = self._get_chain_context(request.chain_id, request.chain_step)
+            if chain_context:
+                graph_context = f"{graph_context}\n\n{chain_context}" if graph_context else chain_context
+                logger.info(f"Injected chain context from chain {request.chain_id} step {request.chain_step - 1}")
+
         # Determine actual rounds to execute
         # Quick mode forces single round for fast deliberation
         if request.mode == "quick":
@@ -1346,6 +1390,8 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
             graph_context_summary=graph_context_summary,  # Add graph context summary
             tool_executions=self.tool_execution_history,  # Add tool execution history
             structured_findings=structured_findings,  # Add structured findings
+            chain_id=request.chain_id,
+            chain_step=request.chain_step,
         )
 
         # Add convergence info if available
@@ -1431,6 +1477,25 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                     request.question, result
                 )
                 logger.info(f"Stored deliberation in decision graph: {decision_id}")
+
+                # Store findings in debt tracker if structured findings available
+                if structured_findings and structured_findings.findings:
+                    try:
+                        from decision_graph.debt_tracker import DebtTracker
+                        tracker = DebtTracker(self.graph_integration.storage)
+                        debt_items = tracker.store_findings(decision_id, structured_findings.findings)
+                        regressions = [d for d in debt_items if d.status == "recurring"]
+                        if regressions:
+                            logger.warning(
+                                f"Regression Sentinel: {len(regressions)} recurring issue(s) detected"
+                            )
+                        logger.info(
+                            f"Stored {len(debt_items)} findings in debt tracker "
+                            f"({len(regressions)} regressions)"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Error storing findings in debt tracker: {e}")
+
             except Exception as e:
                 logger.warning(f"Error storing deliberation in graph: {e}")
 

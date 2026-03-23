@@ -86,6 +86,19 @@ class DeliberateRequest(BaseModel):
     panel: Optional[str] = Field(
         default=None, description="Named panel preset from panels.yaml"
     )
+    chain_id: Optional[str] = Field(
+        default=None,
+        description=(
+            "Chain identifier linking multiple deliberations together. "
+            "When set, the previous chain step's structured findings and summary "
+            "are injected as context into this deliberation."
+        ),
+    )
+    chain_step: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Step number in a deliberation chain (1-indexed). Step 1 = first deliberation.",
+    )
 
 
 class RoundResponse(BaseModel):
@@ -286,4 +299,10 @@ class DeliberationResult(BaseModel):
             "Includes verdict, risk level, and categorized findings with severity. "
             "Available when models produce review-style output."
         ),
+    )
+    chain_id: Optional[str] = Field(
+        default=None, description="Chain ID if this deliberation is part of a chain"
+    )
+    chain_step: Optional[int] = Field(
+        default=None, description="Step number in the chain"
     )
