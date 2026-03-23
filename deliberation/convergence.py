@@ -181,7 +181,18 @@ class SentenceTransformerBackend(SimilarityBackend):
         Args:
             model_name: Model to use (default: all-MiniLM-L6-v2)
                        This is a good balance of speed and accuracy.
+
+        Raises:
+            ImportError: If sentence-transformers is not installed.
         """
+        # Fail fast at init so the fallback chain works correctly
+        try:
+            import sentence_transformers  # noqa: F401
+        except ImportError:
+            raise ImportError(
+                "SentenceTransformerBackend requires sentence-transformers. "
+                "Install with: pip install sentence-transformers"
+            )
         self._model_name = model_name
         self.model = None
         self.cosine_similarity = None
