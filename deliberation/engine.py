@@ -68,6 +68,7 @@ class DeliberationEngine:
         self.adapters = adapters
         self.transcript_manager = transcript_manager
         self.config = config
+        self.server_dir = server_dir
 
         # Import here to avoid circular dependency
         if transcript_manager is None:
