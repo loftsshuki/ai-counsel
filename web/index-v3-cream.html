@@ -54,11 +54,11 @@
   .nav-link:hover { color:var(--cream); }
   .nav-btn {
     font-family:var(--fb); font-size:0.75rem; font-weight:500;
-    background:var(--green-dim); color:var(--cream); border:none;
+    background:var(--green); color:oklch(97% .01 85); border:none;
     padding:0.5rem 1.25rem; border-radius:3px; cursor:pointer;
     transition:background 200ms;
   }
-  .nav-btn:hover { background:var(--green); }
+  .nav-btn:hover { background:oklch(45% 0.13 155); }
 
   /* HERO */
   .hero {
@@ -239,14 +239,14 @@
     grid-column:1 / -1; min-height:380px;
     display:grid; grid-template-columns:1fr 1fr; align-items:center;
     gap:3rem; padding:3rem;
-    background:linear-gradient(135deg, oklch(18% 0.06 155), oklch(11% 0.04 150));
-    border:1px solid oklch(28% 0.06 155 / 0.5);
+    background:linear-gradient(135deg, oklch(35% 0.10 155), oklch(25% 0.08 150));
+    border:1px solid oklch(40% 0.08 155 / 0.4);
     border-radius:10px; position:relative; overflow:hidden;
     cursor:default;
   }
   .refine-hero-card::before {
     content:''; position:absolute; inset:0;
-    background:radial-gradient(ellipse at 80% 20%, oklch(30% 0.08 155 / 0.3), transparent 60%);
+    background:radial-gradient(ellipse at 80% 20%, oklch(45% 0.10 155 / 0.25), transparent 60%);
   }
   .rh-left { position:relative; z-index:1; }
   .rh-tag {
@@ -273,8 +273,8 @@
   .rh-cta:hover { background:oklch(55% 0.10 75); }
   .rh-right { position:relative; z-index:1; display:flex; flex-direction:column; gap:0.8rem; }
   .rh-card {
-    background:oklch(14% 0.04 155 / 0.6); backdrop-filter:blur(4px);
-    border:1px solid oklch(28% 0.05 155 / 0.4); border-radius:6px;
+    background:oklch(30% 0.06 155 / 0.5); backdrop-filter:blur(4px);
+    border:1px solid oklch(45% 0.06 155 / 0.4); border-radius:6px;
     padding:1rem 1.25rem; cursor:pointer;
     transition:border-color 250ms, transform 200ms var(--ease);
   }
@@ -517,7 +517,7 @@ function render() {
       let steps = '';
       if (it.steps) steps = `<div class="dest-steps">${it.steps.map((s,i)=>i<it.steps.length-1?`<span>${s}</span><span class="arr">\u2192</span>`:`<span>${s}</span>`).join('')}</div>`;
       let codeBlock = '';
-      if (it.code) codeBlock = `<pre style="position:absolute;top:1rem;right:1rem;font-family:var(--fm);font-size:0.48rem;line-height:1.6;color:oklch(70% 0.04 155 / 0.5);pointer-events:none;white-space:pre;text-align:right;z-index:0">${it.code}</pre>`;
+      if (it.code) codeBlock = `<pre style="position:absolute;top:1.2rem;right:1.2rem;font-family:var(--fm);font-size:0.62rem;line-height:1.7;color:oklch(75% 0.05 155 / 0.45);pointer-events:none;white-space:pre;text-align:right;z-index:0">${it.code}</pre>`;
       el.innerHTML = `${badge}${codeBlock}<div class="dest-content-wrap"><div class="dest-name">${it.n}</div><div class="dest-desc">${it.d}</div>${steps}</div>`;
       el.onclick = () => pick(it.q, it.p);
       g.appendChild(el);
