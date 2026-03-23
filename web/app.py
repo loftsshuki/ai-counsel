@@ -87,6 +87,7 @@ class WebDeliberateRequest(BaseModel):
     previous_result: Optional[str] = None  # Council's previous output
     user_feedback: Optional[str] = None  # What the user wants improved
     refinement_round: int = 0  # Which iteration (0 = first run)
+    workflow: Optional[str] = None  # Workflow mode: brainstorm, red_team, etc.
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -123,6 +124,13 @@ async def list_models():
             result[adapter_name] = adapter_models
 
     return result
+
+
+@app.get("/api/workflows")
+async def list_workflows_endpoint():
+    """List available workflow modes."""
+    from deliberation.workflows import list_workflows
+    return list_workflows()
 
 
 @app.get("/api/panels")
@@ -199,6 +207,7 @@ Address the user's feedback directly. Keep what worked, fix what didn't. Be spec
                 rounds=rounds,
                 mode=mode,
                 working_directory=request.working_directory,
+                workflow=request.workflow,
             )
 
             # Use asyncio.Queue for true streaming — engine pushes events,

@@ -324,6 +324,9 @@
         <div class="search-bottom">
           <div class="search-left">
             <select class="s-select" id="panel"></select>
+            <select class="s-select" id="workflowSelect" onchange="updateGoButton()" style="min-width:120px">
+              <option value="deliberate">Deliberate</option>
+            </select>
             <button class="s-models-btn" id="modelsBtn" onclick="openPicker()">Models</button>
           </div>
           <button class="s-go" id="goBtn" onclick="go()">Deliberate</button>
@@ -643,7 +646,8 @@ function go() {
   lastResultText='';
   resetDebateUI();
 
-  sendDeliberation({question:q,panel:document.getElementById('panel').value,rounds:2,working_directory:'.',custom_models:selModels.length>=2?selModels:null});}
+  const wf=document.getElementById('workflowSelect').value;
+  sendDeliberation({question:q,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf});}
 
 function refine(){
   const feedback=document.getElementById('refineFeedback').value;
@@ -655,12 +659,13 @@ function refine(){
   sendDeliberation({
     question:originalQuestion,
     panel:document.getElementById('panel').value,
-    rounds:2,
+    rounds:3,
     working_directory:'.',
     custom_models:selModels.length>=2?selModels:null,
     previous_result:lastResultText.substring(0,4000),
     user_feedback:feedback,
-    refinement_round:refinementCount
+    refinement_round:refinementCount,
+    workflow:document.getElementById('workflowSelect').value
   });
 }
 
@@ -732,9 +737,10 @@ function ev(t,d){
 
   if(t==='round_start'){
     currentRound=d.round;
-    addActivity('\ud83d\udd04',`Round ${d.round} of ${d.total_rounds} started`,'info');
+    const phaseStr=d.phase?` — ${d.phase}`:'';
+    addActivity('\ud83d\udd04',`Round ${d.round} of ${d.total_rounds}${phaseStr}`,'info');
     renderPhases('round '+d.round);
-    document.getElementById('sText').textContent=`Round ${d.round}: waiting for models...`;
+    document.getElementById('sText').textContent=`Round ${d.round}${phaseStr}: waiting for models...`;
   }
 
   if(t==='response'){
@@ -833,7 +839,30 @@ function ev(t,d){
 function fin(){document.getElementById('goBtn').disabled=false;}
 function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 
-render();loadPanels();loadModels();
+async function loadWorkflows(){
+  try{
+    const r=await fetch('/api/workflows');
+    const wfs=await r.json();
+    const sel=document.getElementById('workflowSelect');
+    sel.innerHTML='';
+    for(const w of wfs){
+      const o=document.createElement('option');
+      o.value=w.id;
+      o.textContent=w.name;
+      o.title=w.description;
+      sel.appendChild(o);
+    }
+    updateGoButton();
+  }catch(e){console.error('Failed to load workflows',e);}
+}
+
+function updateGoButton(){
+  const sel=document.getElementById('workflowSelect');
+  const btn=document.getElementById('goBtn');
+  btn.textContent=sel.options[sel.selectedIndex]?.textContent||'Go';
+}
+
+render();loadPanels();loadModels();loadWorkflows();
 </script>
 </body>
 </html>

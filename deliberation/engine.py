@@ -1193,9 +1193,29 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
         converged = False
         model_controlled_stop = False
 
+        # Load workflow if specified
+        active_workflow = None
+        if request.workflow:
+            from deliberation.workflows import get_workflow
+            active_workflow = get_workflow(request.workflow)
+            if active_workflow:
+                logger.info(f"Using workflow: {active_workflow.name} ({len(active_workflow.phases)} phases)")
+                # Use workflow's recommended rounds if more than requested
+                if active_workflow.recommended_rounds > rounds_to_execute:
+                    rounds_to_execute = active_workflow.recommended_rounds
+                    logger.info(f"Adjusted rounds to {rounds_to_execute} for workflow")
+
         for round_num in range(1, rounds_to_execute + 1):
             round_start = datetime.now()
-            progress_logger.info(f"📍 ROUND {round_num}/{rounds_to_execute} START")
+
+            # Get workflow phase info for this round
+            phase_name = None
+            if active_workflow:
+                phase = active_workflow.get_phase(round_num)
+                phase_name = phase.label
+                progress_logger.info(f"📍 ROUND {round_num}/{rounds_to_execute} START — Phase: {phase.name}")
+            else:
+                progress_logger.info(f"📍 ROUND {round_num}/{rounds_to_execute} START")
 
             # Fire round_start event for streaming UI
             if on_event:
@@ -1204,9 +1224,15 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                         "round": round_num,
                         "total_rounds": rounds_to_execute,
                         "participants": model_list,
+                        "phase": phase_name,
                     })
                 except Exception:
                     pass
+
+            # Transform prompt through workflow if active
+            round_prompt = request.question
+            if active_workflow:
+                round_prompt = active_workflow.get_enhanced_prompt(round_num, request.question)
 
             try:
                 # Execute round with timeout protection (5 min per round max)
@@ -1214,7 +1240,7 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                 round_responses = await asyncio.wait_for(
                     self.execute_round(
                         round_num=round_num,
-                        prompt=request.question,
+                        prompt=round_prompt,
                         participants=request.participants,
                         previous_responses=all_responses,
                         graph_context=graph_context,

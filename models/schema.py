@@ -99,6 +99,10 @@ class DeliberateRequest(BaseModel):
         ge=1,
         description="Step number in a deliberation chain (1-indexed). Step 1 = first deliberation.",
     )
+    workflow: Optional[str] = Field(
+        default=None,
+        description="Workflow mode: deliberate, brainstorm, red_team, interview, tournament. Changes prompt strategy per round.",
+    )
 
 
 class RoundResponse(BaseModel):
