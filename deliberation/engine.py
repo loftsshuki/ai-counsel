@@ -1207,6 +1207,21 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                     rounds_to_execute = active_workflow.recommended_rounds
                     logger.info(f"Adjusted rounds to {rounds_to_execute} for workflow")
 
+        # CEO Boardroom: use specialized orchestrator
+        is_ceo_mode = request.workflow == "ceo_boardroom" and len(request.participants) >= 2
+        expertise_store = {}
+        if is_ceo_mode:
+            # Load expertise from disk if available
+            expertise_path = self.server_dir / "expertise" if self.server_dir else Path("expertise")
+            if expertise_path.exists():
+                import json as _json
+                try:
+                    ep = expertise_path / "store.json"
+                    if ep.exists():
+                        expertise_store = _json.loads(ep.read_text())
+                except Exception:
+                    pass
+
         for round_num in range(1, rounds_to_execute + 1):
             round_start = datetime.now()
 
@@ -1231,6 +1246,80 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
                 except Exception:
                     pass
 
+            # ===== CEO MODE: Use CEO orchestrator =====
+            if is_ceo_mode:
+                from deliberation.ceo_orchestrator import execute_ceo_round, update_expertise
+                ceo = request.participants[0]
+                board = request.participants[1:]
+                try:
+                    round_timeout = self.config.defaults.timeout_per_round if self.config and hasattr(self.config, 'defaults') and hasattr(self.config.defaults, 'timeout_per_round') else 300
+                    round_responses = await asyncio.wait_for(
+                        execute_ceo_round(
+                            engine=self,
+                            round_num=round_num,
+                            total_rounds=rounds_to_execute,
+                            prompt=request.question,
+                            ceo=ceo,
+                            board=board,
+                            previous_responses=all_responses,
+                            graph_context=graph_context,
+                            working_directory=request.working_directory,
+                            on_event=on_event,
+                            expertise_store=expertise_store,
+                        ),
+                        timeout=round_timeout,
+                    )
+                    # Update expertise after each round
+                    expertise_store = update_expertise(expertise_store, round_responses, request.question)
+                except asyncio.TimeoutError:
+                    round_responses = [
+                        RoundResponse(
+                            round=round_num,
+                            participant=f"{p.model}@{p.cli}",
+                            response=f"[ERROR: Round timed out]",
+                            timestamp=datetime.now().isoformat(),
+                        )
+                        for p in request.participants
+                    ]
+                except Exception as e:
+                    round_responses = [
+                        RoundResponse(
+                            round=round_num,
+                            participant=f"{p.model}@{p.cli}",
+                            response=f"[ERROR: {type(e).__name__}: {str(e)[:200]}]",
+                            timestamp=datetime.now().isoformat(),
+                        )
+                        for p in request.participants
+                    ]
+                all_responses.extend(round_responses)
+
+                # Log and continue to convergence check
+                round_elapsed = (datetime.now() - round_start).total_seconds()
+                successful = [r for r in round_responses if not r.response.startswith("[ERROR")]
+                progress_logger.info(f"   CEO Round {round_num} complete: {len(successful)}/{len(round_responses)} models, {round_elapsed:.1f}s")
+
+                # Skip to convergence check (below the normal execute_round block)
+                # We need to jump past the normal round execution
+                round_num_for_convergence = round_num
+                goto_convergence = True
+            else:
+                goto_convergence = False
+
+            if is_ceo_mode and goto_convergence:
+                # Save expertise to disk
+                if expertise_store:
+                    import json as _json
+                    expertise_path = self.server_dir / "expertise" if self.server_dir else Path("expertise")
+                    expertise_path.mkdir(exist_ok=True)
+                    (expertise_path / "store.json").write_text(_json.dumps(expertise_store, indent=2))
+
+                # Skip normal round execution, go to convergence
+                round_elapsed = (datetime.now() - round_start).total_seconds()
+                successful = [r for r in round_responses if not r.response.startswith("[ERROR")]
+                # Continue to next iteration — convergence check happens below for non-CEO too
+                continue
+
+            # ===== NORMAL MODE: Equal-peer deliberation =====
             # Transform prompt through workflow if active
             round_prompt = request.question
             if active_workflow:

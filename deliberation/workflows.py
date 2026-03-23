@@ -216,6 +216,32 @@ Be specific and actionable. Quality over quantity.""",
 ))
 
 
+# --- CEO & Board ---
+_register(Workflow(
+    id="ceo_boardroom",
+    name="CEO & Board",
+    description="One model leads as CEO. Board members debate. CEO writes the final memo.",
+    icon="crown",
+    phases=[
+        WorkflowPhase(
+            "Frame",
+            "CEO frames the decision for the board. Board members give initial positions.",
+            "Frame"
+        ),
+        WorkflowPhase(
+            "Debate",
+            "CEO challenges the board. Board members defend, revise, or escalate.",
+            "Debate"
+        ),
+        WorkflowPhase(
+            "Memo",
+            "Board gives closing statements. CEO writes the definitive decision memo.",
+            "Memo"
+        ),
+    ],
+))
+
+
 def get_workflow(workflow_id: str) -> Optional[Workflow]:
     """Get a workflow by ID. Returns None if not found."""
     return WORKFLOWS.get(workflow_id)

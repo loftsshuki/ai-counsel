@@ -795,7 +795,8 @@ function ev(t,d){
       <button class="exp-btn" onclick="navigator.clipboard.writeText(document.getElementById('${rId}').textContent).then(()=>this.textContent='Copied!',setTimeout(()=>this.textContent='Copy',1500))" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">Copy</button>
       <button class="exp-btn" onclick="exportFile('# ${esc(modelName)} — Round ${d.round}\\n\\n'+document.getElementById('${rId}').textContent,'${modelName.replace(/[^a-z0-9]/gi,'_')}_r${d.round}.md','text/markdown')" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">.md</button>
     </div>`;
-    e.innerHTML=`${cardExport}<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem"><div style="font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--cream)">${esc(modelName)}</div><div style="display:flex;gap:.4rem"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">Round ${d.round}</span></div></div><div id="${rId}" style="font-family:var(--fm);font-size:.8rem;line-height:1.8;color:var(--cream-dim);white-space:pre-wrap;max-height:400px;overflow-y:auto">${esc(d.response)}</div>`;
+    const roleBadge=d.role==='ceo'?'<span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:oklch(45% 0.12 75);color:oklch(92% .01 85);margin-left:.3rem">CEO</span>':d.role==='board'?'<span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:oklch(35% 0.08 155);color:oklch(92% .01 85);margin-left:.3rem">Board</span>':'';
+    e.innerHTML=`${cardExport}<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem"><div style="display:flex;align-items:center"><span style="font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--cream)">${esc(modelName)}</span>${roleBadge}</div><div style="display:flex;gap:.4rem"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">Round ${d.round}</span></div></div><div id="${rId}" style="font-family:var(--fm);font-size:.8rem;line-height:1.8;color:var(--cream-dim);white-space:pre-wrap;max-height:400px;overflow-y:auto">${renderResponse(d.response)}</div>`;
     s.appendChild(e);
     e.scrollIntoView({behavior:'smooth',block:'end'});
   }
@@ -856,7 +857,8 @@ function ev(t,d){
       <button onclick="exportFile(buildHTML(),'deliberation.html','text/html')" style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--green-dim)'">.html</button>
       <button onclick="exportFile(buildJSON(),'deliberation.json','application/json')" style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--green-dim)'">.json</button>
       <button onclick="navigator.clipboard.writeText(buildMarkdown()).then(()=>this.textContent='Copied!')" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:var(--cream-muted);transition:all .15s">Copy All</button>
-      <button onclick="shareE2E()" style="background:oklch(45% 0.12 270);border:1px solid oklch(55% 0.15 270);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='oklch(50% 0.14 270)'" onmouseout="this.style.background='oklch(45% 0.12 270)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Share E2E</button>`;
+      <button onclick="shareE2E()" style="background:oklch(45% 0.12 270);border:1px solid oklch(55% 0.15 270);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='oklch(50% 0.14 270)'" onmouseout="this.style.background='oklch(45% 0.12 270)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Share E2E</button>
+      <button id="voiceBtn" onclick="speakSummary()" style="background:oklch(45% 0.10 45);border:1px solid oklch(55% 0.12 45);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='oklch(50% 0.12 45)'" onmouseout="this.style.background='oklch(45% 0.10 45)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>Voice</button>`;
     document.getElementById('responses').appendChild(expBar);
 
     // Show refine area
@@ -968,6 +970,37 @@ async function shareE2E(){
     showToast('Share failed: '+e.message,'error');
   }
 }
+// Voice output using browser Speech Synthesis API
+let isSpeaking=false;
+function speakSummary(){
+  const btn=document.getElementById('voiceBtn');
+  if(isSpeaking){speechSynthesis.cancel();isSpeaking=false;btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>Voice';return}
+  // Build speech text from summary + key findings
+  let text='';
+  if(deliberationData.summary){
+    const s=deliberationData.summary;
+    if(s.executive_summary)text+=s.executive_summary+'. ';
+    if(s.recommendation)text+='Recommendation: '+s.recommendation+'. ';
+    if(s.key_agreements&&s.key_agreements.length)text+='The council agreed on: '+s.key_agreements.join('. ')+'. ';
+    if(s.key_disagreements&&s.key_disagreements.length)text+='Points of disagreement: '+s.key_disagreements.join('. ')+'. ';
+  }
+  if(!text){
+    // No summary yet — read the last response
+    const lastResp=deliberationData.responses[deliberationData.responses.length-1];
+    if(lastResp)text=lastResp.text.substring(0,1000);
+  }
+  if(!text){showToast('Nothing to read yet','error');return}
+  const utter=new SpeechSynthesisUtterance(text);
+  utter.rate=1.0;utter.pitch=1.0;
+  // Try to use a good voice
+  const voices=speechSynthesis.getVoices();
+  const preferred=voices.find(v=>v.name.includes('Google')&&v.lang.startsWith('en'))||voices.find(v=>v.lang.startsWith('en'));
+  if(preferred)utter.voice=preferred;
+  utter.onend=()=>{isSpeaking=false;btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>Voice'};
+  speechSynthesis.speak(utter);
+  isSpeaking=true;
+  btn.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Stop';
+}
 function showToast(msg,type){
   const toast=document.createElement('div');
   const bg=type==='error'?'var(--red)':'var(--green)';
@@ -977,6 +1010,21 @@ function showToast(msg,type){
   setTimeout(()=>toast.remove(),5000);
 }
 function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+function renderResponse(text){
+  // Extract SVGs and render them inline, escape everything else
+  const svgRegex=/<svg[\s\S]*?<\/svg>/gi;
+  const parts=text.split(svgRegex);
+  const svgs=text.match(svgRegex)||[];
+  let html='';
+  parts.forEach((part,i)=>{
+    html+=esc(part);
+    if(svgs[i]){
+      // Sanitize SVG: only allow safe SVG elements
+      html+=`<div style="margin:1rem 0;padding:1rem;background:var(--surface2);border-radius:6px;border:1px solid var(--border);overflow-x:auto;text-align:center">${svgs[i]}</div>`;
+    }
+  });
+  return html;
+}
 function copyBtn(targetId){return `<button onclick="copyText('${targetId}')" style="opacity:0;transition:opacity .15s;position:absolute;top:.6rem;right:.6rem;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.35rem .7rem;cursor:pointer;font-family:var(--fm);font-size:.7rem;color:var(--cream-muted);display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='var(--green)';this.style.color='oklch(95% .01 85)';this.style.borderColor='var(--green)'" onmouseout="this.style.background='var(--surface2)';this.style.color='var(--cream-muted)';this.style.borderColor='var(--border)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>`}
 function copyText(id){const el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.textContent).then(()=>{const btns=el.parentElement.querySelectorAll('button');btns.forEach(b=>{if(b.textContent.includes('Copy')){b.innerHTML=b.innerHTML.replace('Copy','Copied!');setTimeout(()=>b.innerHTML=b.innerHTML.replace('Copied!','Copy'),1500)}})})}
 
