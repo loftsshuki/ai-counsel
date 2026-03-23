@@ -2,8 +2,8 @@ panels:
   architecture-review:
     description: "Architecture and design review"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
       - cli: openrouter
         model: google/gemini-2.5-flash
       - cli: openrouter
@@ -14,9 +14,8 @@ panels:
   security-audit:
     description: "Security-focused review"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
       - cli: openrouter
         model: x-ai/grok-4
       - cli: openrouter
@@ -27,8 +26,8 @@ panels:
   quick-check:
     description: "Fast 2-model sanity check"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
       - cli: openrouter
         model: google/gemini-2.5-flash
     mode: quick
@@ -37,8 +36,8 @@ panels:
   code-review:
     description: "Code quality and correctness review"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
       - cli: openrouter
         model: google/gemini-2.5-flash
       - cli: openrouter
@@ -49,9 +48,8 @@ panels:
   deep-analysis:
     description: "Thorough analysis with premium models"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
       - cli: openrouter
         model: google/gemini-2.5-pro
       - cli: openrouter
@@ -64,8 +62,8 @@ panels:
   product-council:
     description: "Product decision council with distinct perspectives"
     participants:
-      - cli: claude
-        model: opus
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Strategist"
         system_prompt: "You are a product strategist focused on market positioning, competitive advantage, and long-term business viability. Evaluate every proposal through the lens of: Will this generate revenue? Does it differentiate us? What's the opportunity cost?"
       - cli: openrouter
@@ -82,9 +80,8 @@ panels:
   security-red-team:
     description: "Adversarial security review with attacker/defender personas"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Attacker"
         system_prompt: "You are a penetration tester. Your job is to find every possible vulnerability, attack vector, and exploitation path. Think like a malicious actor. What would you try first? What data can you exfiltrate? Where are the trust boundaries weakest?"
       - cli: openrouter
@@ -101,8 +98,8 @@ panels:
   luxury-brand-council:
     description: "Brand and design review for luxury real estate"
     participants:
-      - cli: claude
-        model: opus
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Creative Director"
         system_prompt: "You are a luxury brand creative director. Evaluate everything through the lens of premium positioning: Does this feel exclusive? Is the typography, spacing, and imagery consistent with high-end real estate brands like Sotheby's or Christie's? Flag anything that looks generic or template-like."
       - cli: openrouter
@@ -121,8 +118,8 @@ panels:
   pre-commit-review:
     description: "Review staged changes before commit — three perspectives on code quality"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
         persona: "The Correctness Reviewer"
         system_prompt: >
           You are reviewing a code diff before it is committed. Focus on CORRECTNESS:
@@ -159,8 +156,8 @@ panels:
   pre-commit-quick:
     description: "Fast pre-commit check — 2 models, 1 round, for small changes"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
         persona: "Code Reviewer"
         system_prompt: >
           Review this code diff for correctness, security, and architectural fit.
@@ -181,9 +178,8 @@ panels:
   full-stack-audit:
     description: "Complete full-stack audit: architecture, code quality, security, performance"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Architect"
         system_prompt: >
           You are the FIRST reviewer in a full-stack audit. Focus on ARCHITECTURE:
@@ -212,8 +208,8 @@ panels:
   frontend-review:
     description: "Complete frontend review: UX, accessibility, performance, security"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
         persona: "The UX Reviewer"
         system_prompt: >
           Focus on USER EXPERIENCE: Is the navigation intuitive? Are CTAs clear? Is the
@@ -239,9 +235,8 @@ panels:
   backend-review:
     description: "Complete backend review: architecture, security, data, reliability"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The API Architect"
         system_prompt: >
           Focus on BACKEND ARCHITECTURE: Are API routes well-organized? Is authentication
@@ -267,9 +262,8 @@ panels:
   launch-readiness:
     description: "Launch readiness check: security, performance, UX, ops"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Security Gate"
         system_prompt: >
           You are the SECURITY GATE for launch. This is a go/no-go decision. Check for any
@@ -297,9 +291,8 @@ panels:
   refine-prompt:
     description: "Iteratively refine a prompt to 10/10 — 3 models compete to write the best version"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Clarity Expert"
         system_prompt: >
           You are refining a prompt through iterative improvement. In each round:
@@ -335,8 +328,8 @@ panels:
   refine-copy:
     description: "Iteratively refine marketing copy, emails, or landing page text to 10/10"
     participants:
-      - cli: claude
-        model: sonnet
+      - cli: openrouter
+        model: anthropic/claude-sonnet-4
         persona: "The Conversion Writer"
         system_prompt: >
           You are refining copy. In each round: Score (1-10), identify the weakest
@@ -364,9 +357,8 @@ panels:
   refine-system-prompt:
     description: "Iteratively refine an AI system prompt or skill to 10/10"
     participants:
-      - cli: claude
-        model: opus
-        reasoning_effort: high
+      - cli: openrouter
+        model: anthropic/claude-opus-4
         persona: "The Instruction Designer"
         system_prompt: >
           You are refining an AI system prompt. In each round: Score (1-10), identify
