@@ -14,8 +14,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Optional
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+import tempfile
+import uuid
+
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 # Add parent to path for imports
@@ -89,6 +92,7 @@ class WebDeliberateRequest(BaseModel):
     refinement_round: int = 0  # Which iteration (0 = first run)
     workflow: Optional[str] = None  # Workflow mode: brainstorm, red_team, etc.
     private_mode: bool = False  # Skip transcript saving + decision graph storage
+    upload_id: Optional[str] = None  # Reference to uploaded documents
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -148,6 +152,66 @@ async def list_panels():
     return result
 
 
+# --- Document Upload ---
+# In-memory store for uploaded documents (keyed by session upload_id)
+_uploaded_docs: dict[str, list[dict]] = {}
+
+# Allowed file extensions and max size (10MB)
+_ALLOWED_EXTENSIONS = {
+    ".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".rs", ".java", ".c", ".cpp",
+    ".h", ".cs", ".rb", ".php", ".swift", ".kt", ".scala", ".r",
+    ".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".xml", ".csv",
+    ".html", ".css", ".scss", ".sql", ".sh", ".bash", ".zsh",
+    ".env", ".conf", ".cfg", ".ini", ".dockerfile",
+    ".sol", ".vy",  # smart contracts
+}
+_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@app.post("/api/upload")
+async def upload_documents(files: list[UploadFile] = File(...)):
+    """Upload documents for council review. Returns an upload_id to reference in deliberation."""
+    upload_id = str(uuid.uuid4())[:8]
+    docs = []
+
+    for f in files:
+        # Validate extension
+        ext = Path(f.filename or "").suffix.lower()
+        if ext not in _ALLOWED_EXTENSIONS and ext != "":
+            # Allow extensionless files (like Dockerfile, Makefile)
+            pass
+
+        # Read content with size limit
+        content = await f.read()
+        if len(content) > _MAX_FILE_SIZE:
+            return JSONResponse(
+                status_code=413,
+                content={"error": f"File '{f.filename}' exceeds 10MB limit"}
+            )
+
+        # Decode text
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            return JSONResponse(
+                status_code=415,
+                content={"error": f"File '{f.filename}' is not a text file"}
+            )
+
+        docs.append({
+            "filename": f.filename,
+            "size": len(content),
+            "content": text,
+        })
+
+    _uploaded_docs[upload_id] = docs
+
+    return {
+        "upload_id": upload_id,
+        "files": [{"filename": d["filename"], "size": d["size"]} for d in docs],
+    }
+
+
 @app.post("/api/deliberate/stream")
 async def deliberate_stream(request: WebDeliberateRequest):
     """
@@ -200,6 +264,16 @@ You previously answered this question and the user wants improvements.
 
 ### Instructions
 Address the user's feedback directly. Keep what worked, fix what didn't. Be specific and actionable. This is refinement round {request.refinement_round} — the goal is 10/10."""
+
+            # Inject uploaded documents as context
+            if request.upload_id and request.upload_id in _uploaded_docs:
+                docs = _uploaded_docs[request.upload_id]
+                doc_context = "\n\n## Uploaded Documents for Review\n\n"
+                for doc in docs:
+                    doc_context += f"### File: `{doc['filename']}`\n```\n{doc['content']}\n```\n\n"
+                question = question + doc_context
+                # Clean up after use
+                del _uploaded_docs[request.upload_id]
 
             # Build request
             delib_request = DeliberateRequest(

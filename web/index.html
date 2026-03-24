@@ -117,6 +117,36 @@
     line-height:1.6; resize:none; min-height:32px;
   }
   .search-textarea::placeholder { color:var(--cream-muted); }
+
+  /* Document upload area */
+  .upload-zone {
+    margin-top:0.6rem; padding:0.6rem 0.8rem;
+    border:1px dashed var(--border); border-radius:6px;
+    background:oklch(8% 0.02 155 / 0.4);
+    cursor:pointer; transition:all 200ms;
+    display:flex; align-items:center; gap:0.6rem;
+    font-family:var(--fm); font-size:0.75rem; color:var(--cream-muted);
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color:var(--gold); background:oklch(12% 0.03 75 / 0.15);
+    color:var(--cream-dim);
+  }
+  .upload-zone svg { flex-shrink:0; opacity:0.6; }
+  .upload-files {
+    display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.4rem;
+  }
+  .upload-file-tag {
+    display:inline-flex; align-items:center; gap:0.3rem;
+    padding:0.25rem 0.5rem; border-radius:4px;
+    background:oklch(18% 0.03 155); color:var(--cream-dim);
+    font-family:var(--fm); font-size:0.7rem;
+  }
+  .upload-file-tag .remove-file {
+    cursor:pointer; opacity:0.5; transition:opacity 150ms;
+    font-size:0.8rem; line-height:1;
+  }
+  .upload-file-tag .remove-file:hover { opacity:1; color:var(--red); }
+
   .search-bottom {
     display:flex; align-items:center; justify-content:space-between;
     margin-top:0.8rem; padding-top:0.8rem;
@@ -325,6 +355,16 @@
     <div class="search">
       <div class="search-box">
         <textarea class="search-textarea" id="question" rows="1" placeholder="Ask the council anything..." oninput="this.style.height='auto';this.style.height=Math.max(28,this.scrollHeight)+'px'"></textarea>
+
+        <!-- Document upload zone -->
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Drop files here for review, or click to browse</span>
+          <span style="margin-left:auto;opacity:0.5;font-size:0.65rem">.py .js .ts .md .json .yaml .sql +more</span>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".py,.js,.ts,.tsx,.jsx,.go,.rs,.java,.c,.cpp,.h,.cs,.rb,.php,.swift,.kt,.md,.txt,.json,.yaml,.yml,.toml,.xml,.csv,.html,.css,.scss,.sql,.sh,.sol" style="display:none" onchange="handleFiles(this.files)">
+        <div class="upload-files" id="uploadFiles"></div>
+
         <div class="search-bottom">
           <div class="search-left">
             <select class="s-select" id="panel"></select>
@@ -653,7 +693,7 @@ function sendDeliberation(body){
   }).catch(()=>fin());
 }
 
-function go() {
+async function go() {
   const q=document.getElementById('question').value;
   if(!q.trim())return;
   originalQuestion=q;
@@ -661,9 +701,17 @@ function go() {
   lastResultText='';
   resetDebateUI();
 
+  // Upload files if any
+  let uploadId = null;
+  if (pendingFiles.length > 0) {
+    addActivity('\u{1F4C4}', `Uploading ${pendingFiles.length} file${pendingFiles.length>1?'s':''}...`, 'convergence');
+    uploadId = await uploadPendingFiles();
+    if (uploadId) addActivity('\u2705', `Files uploaded — council will review them`, 'convergence');
+  }
+
   const wf=document.getElementById('workflowSelect').value;
   const priv=document.getElementById('privateMode').checked;
-  sendDeliberation({question:q,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv});}
+  sendDeliberation({question:q,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId});}
 
 function refine(){
   const feedback=document.getElementById('refineFeedback').value;
@@ -689,6 +737,64 @@ function refine(){
 let startTime=0;let timerInterval=null;let totalParticipants=0;let responsesReceived=0;let currentRound=0;let totalRounds=2;
 let originalQuestion='';let lastResultText='';let refinementCount=0;let allResponseTexts=[];let deliberationModels=[];
 let runningCost=0;let modelPricing={}; // {adapter/model_id: {input_cost, output_cost}}
+
+// --- Document Upload ---
+let pendingFiles = [];
+let currentUploadId = null;
+
+const uploadZone = document.getElementById('uploadZone');
+const uploadFilesDiv = document.getElementById('uploadFiles');
+const fileInput = document.getElementById('fileInput');
+
+// Drag and drop
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFiles(fileList) {
+  for (const f of fileList) {
+    if (f.size > 10 * 1024 * 1024) { alert(`${f.name} exceeds 10MB limit`); continue; }
+    if (pendingFiles.some(p => p.name === f.name)) continue;
+    pendingFiles.push(f);
+  }
+  renderFileTags();
+  fileInput.value = '';
+}
+
+function removeFile(name) {
+  pendingFiles = pendingFiles.filter(f => f.name !== name);
+  renderFileTags();
+}
+
+function renderFileTags() {
+  uploadFilesDiv.innerHTML = pendingFiles.map(f =>
+    `<span class="upload-file-tag">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ${f.name} <span style="opacity:0.4;font-size:0.6rem">${(f.size/1024).toFixed(0)}KB</span>
+      <span class="remove-file" onclick="removeFile('${f.name}')">&times;</span>
+    </span>`
+  ).join('');
+  // Show/hide upload zone text based on files
+  uploadZone.querySelector('span').textContent = pendingFiles.length
+    ? `${pendingFiles.length} file${pendingFiles.length>1?'s':''} ready for review`
+    : 'Drop files here for review, or click to browse';
+}
+
+async function uploadPendingFiles() {
+  if (pendingFiles.length === 0) return null;
+  const form = new FormData();
+  for (const f of pendingFiles) form.append('files', f);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: form });
+    if (!res.ok) { const err = await res.json(); alert(err.error || 'Upload failed'); return null; }
+    const data = await res.json();
+    return data.upload_id;
+  } catch (e) { alert('Upload failed: ' + e.message); return null; }
+}
 
 function startTimer(){
   startTime=Date.now();
