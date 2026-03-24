@@ -8,9 +8,9 @@
 
 - Record demo GIF for README
 - Implement auth/payment for Pro tier
-- Web UI v4 iteration (cream background polish, reduce spacing)
 - Live test: run full brainstorm workflow against real models on Railway
 - Build structured brief templates (optional, for Strategic Decision category)
+- Rotate API keys (OpenRouter + Nebius exposed in conversation)
 
 ## Done This Week
 
@@ -43,6 +43,13 @@
   - Running cost display during deliberation
 - **Private Mode:**
   - Toggle to skip transcript saving + decision graph storage
+- **Luxury Brand Summary + HTML Export:**
+  - Council Verdict: deep green hero, topo SVG, Cormorant Garamond, cream body
+  - HTML export: full standalone branded page with metadata bar
+- **Stop Button:**
+  - AbortController cancels SSE stream mid-deliberation
+- **File Upload Fix (Railway):**
+  - python-multipart added to requirements-web.txt
 - **Convergence Fix:**
   - SentenceTransformerBackend now fails fast at init for proper fallback chain
   - Jaccard fallback works on Railway (zero dependencies)
