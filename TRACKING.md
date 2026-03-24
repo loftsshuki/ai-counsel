@@ -2,53 +2,57 @@
 
 ## In Progress
 
-- PR #1 (loftsshuki/ai-counsel): All tiers + web UI + refinement mode — ready to merge
+- Nothing — all shipped to main
 
 ## Up Next
 
-- Deploy web UI to public URL (Railway/Render)
 - Record demo GIF for README
 - Implement auth/payment for Pro tier
-- Build out model picker with live API calls in the picker modal
+- Web UI v4 iteration (cream background polish, reduce spacing)
+- Live test: run full brainstorm workflow against real models on Railway
+- Build structured brief templates (optional, for Strategic Decision category)
 
 ## Done This Week
 
-- **Tier 1 — Code Quality Foundation:**
+- **CEO & Board Mode:**
+  - CEO agent orchestration (one model leads, others respond, leader synthesizes)
+  - Agent Expertise persistent memory (per-model scratch pads across sessions)
+  - SVG visual arguments (models generate diagrams to support positions)
+- **6 Workflow Modes:**
+  - Deliberate (debate + converge), Brainstorm (diverge → expand → rank)
+  - Red Team (propose → attack → defend), Interview (questions → answers → response)
+  - Tournament (bracket elimination), Refine (iterative 5/10 → 10/10)
+- **Document Upload:**
+  - Drag-and-drop file upload for council review
+  - 30+ file types supported (.py, .js, .ts, .md, .json, .yaml, .sql, etc.)
+  - File contents injected as context into deliberation
+- **Web UI deployed to Railway:**
+  - Public URL: https://adorable-magic-production-cbf2.up.railway.app
+  - Slim Dockerfile (no ML packages, fast builds)
+  - OpenRouter + Nebius API keys configured
+- **81+ Models via OpenRouter:**
+  - Full model registry with pricing tiers
+  - Xiaomi MiMo-V2-Pro, Grok 4.20, NVIDIA Nemotron, Kimi K2.5, DeepSeek v3.2, Perplexity Sonar Pro
+- **E2E Encrypted Sharing:**
+  - Browser-side AES-GCM encryption via Web Crypto API
+  - Decryption key in URL hash (never sent to server)
+- **Real-time Streaming Status Bar:**
+  - Phase labels, model-by-model progress, cost tracker, timer
+- **Cost Tracking:**
+  - Per-model token pricing in config
+  - Running cost display during deliberation
+- **Private Mode:**
+  - Toggle to skip transcript saving + decision graph storage
+- **Convergence Fix:**
+  - SentenceTransformerBackend now fails fast at init for proper fallback chain
+  - Jaccard fallback works on Railway (zero dependencies)
+- **Previous Session (Tiers 1-3):**
   - Web search tool (DuckDuckGo + Tavily)
   - Persona/system_prompt system (8+ persona panels)
   - Pre-commit code review panels (full + quick)
-  - Executive summary mode (plain-English)
-  - Structured Decision Artifacts (Finding model, auto-extraction)
-  - Codebase Health Score MCP tool (weighted A-F grades)
-- **Tier 2 — Learning Flywheel:**
-  - Architecture Debt Tracker (persistent SQLite ledger)
-  - Regression Sentinel (auto-detect recurring issues)
-  - Model Calibration System (per-model accuracy by domain)
-  - Deliberation Chains (chain_id/chain_step, multi-step pipelines)
-- **Tier 3 — Growth:**
-  - Live Streaming Web UI (FastAPI + SSE + 4 design versions)
-  - CI/CD GitHub Action (PR reviews with findings comments)
-  - Panel Marketplace CLI (install/export/list)
-  - Zero-Config Setup Wizard (auto-detect adapters)
-- **Refinement Mode:**
-  - 3 refinement panels: Prompt, Copy, System Prompt
-  - Each runs 3 specialist models for 3 rounds of competitive improvement
-  - Pro tier pricing CTA in web UI
-- **Chained Review Panels:**
-  - Full Stack Audit (Architecture → Code → Security → Performance)
-  - Frontend Review (UX → Accessibility → Performance → Security)
-  - Backend Review (API → Security → Data → Reliability)
-  - Launch Readiness (Security → Performance → UX → Ops)
-- **Web UI Design:**
-  - v1: Scroll page with topo background, animated orbs, category cards
-  - v2: Tabbed command console (Bloomberg Terminal style)
-  - v3: Luxury real estate editorial (dark cards on dark bg)
-  - v3-cream: Luxury editorial with cream background (current)
-  - Model picker modal with tier badges
-  - 26 category cards across 6 sections + 4 chain cards + 3 refinement cards
-- **Infrastructure:**
+  - Executive summary, Structured Findings, Health Score
+  - Architecture Debt Tracker, Regression Sentinel, Model Calibration
+  - Deliberation Chains, Panel Marketplace CLI, Setup Wizard
+  - CI/CD GitHub Action, 4 web UI design versions
   - Fixed 49 pre-existing test failures (949+ passing)
-  - Removed upstream remote permanently
   - Business model doc (AI_COUNCIL_IDEAS.md)
-  - Strategic vision doc (docs/plans/code-quality-guardian-v1.md)
-
