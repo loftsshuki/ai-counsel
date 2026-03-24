@@ -700,24 +700,38 @@ function sendDeliberation(body){
 }
 
 async function go() {
-  const q=document.getElementById('question').value;
-  if(!q.trim())return;
-  originalQuestion=q;
-  refinementCount=0;
-  lastResultText='';
-  resetDebateUI();
+  try {
+    const q=document.getElementById('question').value;
+    // Allow either a question or uploaded files (or both)
+    if(!q.trim() && pendingFiles.length === 0) return;
+    // If files but no question, default to "Review these files"
+    const question = q.trim() || 'Review the uploaded files. Provide detailed analysis, findings, and recommendations.';
+    originalQuestion=question;
+    refinementCount=0;
+    lastResultText='';
+    resetDebateUI();
 
-  // Upload files if any
-  let uploadId = null;
-  if (pendingFiles.length > 0) {
-    addActivity('\u{1F4C4}', `Uploading ${pendingFiles.length} file${pendingFiles.length>1?'s':''}...`, 'convergence');
-    uploadId = await uploadPendingFiles();
-    if (uploadId) addActivity('\u2705', `Files uploaded — council will review them`, 'convergence');
+    // Upload files if any
+    let uploadId = null;
+    if (pendingFiles.length > 0) {
+      addActivity('\u{1F4C4}', `Uploading ${pendingFiles.length} file${pendingFiles.length>1?'s':''}...`, 'convergence');
+      uploadId = await uploadPendingFiles();
+      if (uploadId) {
+        addActivity('\u2705', `Files uploaded — council will review them`, 'convergence');
+      } else {
+        addActivity('\u274C', 'File upload failed', 'error');
+        return;
+      }
+    }
+
+    const wf=document.getElementById('workflowSelect').value;
+    const priv=document.getElementById('privateMode').checked;
+    sendDeliberation({question,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId});
+  } catch(e) {
+    console.error('go() error:', e);
+    addActivity('\u274C', 'Error: ' + e.message, 'error');
   }
-
-  const wf=document.getElementById('workflowSelect').value;
-  const priv=document.getElementById('privateMode').checked;
-  sendDeliberation({question:q,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId});}
+}
 
 function refine(){
   const feedback=document.getElementById('refineFeedback').value;
