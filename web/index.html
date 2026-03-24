@@ -482,6 +482,7 @@
     <div style="display:flex;align-items:center;gap:1.5rem">
       <div id="sCost" style="font-family:var(--fm);font-size:1rem;color:var(--gold);font-weight:500;font-variant-numeric:tabular-nums;display:none">$0.000</div>
       <div id="sTimer" style="font-family:var(--fm);font-size:1rem;color:var(--cream-dim);font-weight:500;font-variant-numeric:tabular-nums">0:00</div>
+      <button id="stopBtn" onclick="stopDeliberation()" style="display:none;padding:.5rem 1.2rem;border-radius:6px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:var(--fm);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em" onmouseenter="this.style.background='var(--red)';this.style.color='var(--surface)'" onmouseleave="this.style.background='transparent';this.style.color='var(--red)'">Stop</button>
     </div>
   </div>
 </div>
@@ -692,11 +693,19 @@ function resetDebateUI(){
   renderPhases('starting');
 }
 
+let abortCtrl=null;
 function sendDeliberation(body){
-  fetch('/api/deliberate/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{
+  abortCtrl=new AbortController();
+  document.getElementById('stopBtn').style.display='inline-block';
+  fetch('/api/deliberate/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:abortCtrl.signal}).then(r=>{
     const rd=r.body.getReader();const dc=new TextDecoder();let buf='';
-    function read(){rd.read().then(({done,value})=>{if(done){fin();return;}buf+=dc.decode(value,{stream:true});const evts=buf.split('\n\n');buf=evts.pop();for(const bl of evts){const ls=bl.split('\n');let t='',d='';for(const l of ls){if(l.startsWith('event: '))t=l.slice(7);else if(l.startsWith('data: '))d=l.slice(6);}if(t&&d)try{ev(t,JSON.parse(d));}catch(e){}}read();});}read();
+    function read(){rd.read().then(({done,value})=>{if(done){fin();return;}buf+=dc.decode(value,{stream:true});const evts=buf.split('\n\n');buf=evts.pop();for(const bl of evts){const ls=bl.split('\n');let t='',d='';for(const l of ls){if(l.startsWith('event: '))t=l.slice(7);else if(l.startsWith('data: '))d=l.slice(6);}if(t&&d)try{ev(t,JSON.parse(d));}catch(e){}}read();}).catch(()=>fin());}read();
   }).catch(()=>fin());
+}
+function stopDeliberation(){
+  if(abortCtrl){abortCtrl.abort();abortCtrl=null;}
+  addActivity('\u{1F6D1}','Deliberation stopped by user','error');
+  fin();
 }
 
 async function go() {
@@ -1011,7 +1020,7 @@ function ev(t,d){
     fin();
   }
 }
-function fin(){document.getElementById('goBtn').disabled=false;}
+function fin(){document.getElementById('goBtn').disabled=false;document.getElementById('stopBtn').style.display='none';abortCtrl=null;}
 
 // Export functions
 let deliberationData={question:'',responses:[],summary:null,workflow:'',models:[],rounds:0,cost:0,elapsed:0};
