@@ -67,7 +67,7 @@ _register(Workflow(
     description="Models debate, challenge reasoning, and converge on a recommendation.",
     icon="scales",
     phases=[
-        WorkflowPhase("Debate", "Present your analysis and position. Be thorough and specific.", "Debate"),
+        WorkflowPhase("Debate", "You are ONE participant in a multi-model council. Other AI models respond separately — do NOT simulate them. Present YOUR analysis and position. Be thorough and specific.", "Debate"),
         WorkflowPhase("Refine", "You've seen the other models' positions. Refine yours — address their strongest points, concede where they're right, strengthen where you disagree.", "Refine"),
         WorkflowPhase("Converge", "Final round. State your position clearly. Where do you agree with the group? Where do you still disagree and why?", "Converge"),
     ],
@@ -82,7 +82,8 @@ _register(Workflow(
     phases=[
         WorkflowPhase(
             "Diverge",
-            """Generate as many ideas as possible — aim for 8-12.
+            """You are ONE participant in a multi-model brainstorm. Other AI models respond separately — do NOT simulate them.
+Generate as many ideas as possible — aim for 8-12.
 Be creative, unconventional, even provocative. No filtering, no critique yet.
 Quantity over quality. Include at least 2 ideas that feel risky or unexpected.
 Format each idea as: **Idea N: [Title]** — [1-2 sentence description]""",
@@ -225,17 +226,46 @@ _register(Workflow(
     phases=[
         WorkflowPhase(
             "Frame",
-            "CEO frames the decision for the board. Board members give initial positions.",
+            """You are ONE member of a board of advisors. Other AI models are the other board members — they will respond separately. Do NOT simulate or roleplay other board members.
+
+YOUR TASK: Give YOUR initial position on this question. Present your unique perspective, analysis, and recommendation. Be specific with numbers, timelines, and tradeoffs. Disagree with conventional wisdom if warranted.
+
+RULES:
+- Speak ONLY as yourself. Do not write responses for other models.
+- Do not simulate a "board meeting" or write dialogue between roles.
+- One perspective. One voice. Your best analysis.""",
             "Frame"
         ),
         WorkflowPhase(
             "Debate",
-            "CEO challenges the board. Board members defend, revise, or escalate.",
+            """You can now see the other board members' positions from Round 1. They are real responses from other AI models — not your simulation.
+
+YOUR TASK: Respond to the OTHER board members' arguments directly.
+1. Name which board member you agree/disagree with and WHY
+2. Poke holes in the weakest argument you've seen
+3. Strengthen or revise YOUR position based on what you've learned
+4. Identify the #1 unresolved tension the board hasn't addressed
+
+RULES:
+- Speak ONLY as yourself. Reference others by their model name.
+- Do NOT simulate their responses or write on their behalf.
+- Be adversarial where it matters. Agree where they're right.""",
             "Debate"
         ),
         WorkflowPhase(
             "Memo",
-            "Board gives closing statements. CEO writes the definitive decision memo.",
+            """Final round. The board has debated. Now deliver your closing statement.
+
+YOUR TASK:
+1. State your FINAL position in 2 sentences
+2. What changed from your Round 1 position (if anything) and why
+3. The single most important action the user should take FIRST
+4. Your honest confidence level (1-10) in the board's collective recommendation
+
+RULES:
+- Speak ONLY as yourself. One final position.
+- Do NOT write a full board memo or simulate other members' conclusions.
+- Be concise. The synthesis happens after all members submit.""",
             "Memo"
         ),
     ],
