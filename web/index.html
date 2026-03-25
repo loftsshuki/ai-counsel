@@ -383,6 +383,11 @@
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
               Private
             </label>
+            <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-family:var(--fm);font-size:.7rem;color:oklch(35% 0.02 155);user-select:none;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:5px;background:var(--surface2);transition:border-color 200ms" title="Rewrite Mode: Models produce a complete rewritten document, not just suggestions.">
+              <input type="checkbox" id="rewriteMode" style="accent-color:var(--gold);width:13px;height:13px;cursor:pointer;margin:0">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4z"/></svg>
+              Rewrite
+            </label>
           </div>
           <button class="s-go" id="goBtn" onclick="go()">Deliberate</button>
         </div>
@@ -502,6 +507,17 @@
     <div style="font-family:var(--fm);font-size:.75rem;color:var(--cream-muted);margin-bottom:1rem">Tell the council what to improve. They'll see their previous answer and your feedback, then try again.</div>
     <div id="refineRound" style="font-family:var(--fm);font-size:.6rem;color:var(--gold);margin-bottom:.8rem"></div>
     <textarea id="refineFeedback" placeholder="What didn't you like? What should they focus on? Be specific..." style="width:100%;min-height:80px;padding:.8rem 1rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--cream);font-family:var(--fm);font-size:.8rem;line-height:1.6;resize:vertical;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    <!-- Refinement file upload -->
+    <div id="refineUploadZone" style="margin-top:.8rem;padding:.8rem 1rem;border:1px dashed var(--border);border-radius:6px;background:var(--surface2);cursor:pointer;transition:all .2s" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';this.style.background='var(--surface)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'" ondrop="handleRefineDrop(event)" onclick="document.getElementById('refineFileInput').click()">
+      <div id="refineUploadLabel" style="font-family:var(--fm);font-size:.7rem;color:var(--cream-muted);text-align:center">
+        Drop an updated file here or click to upload
+      </div>
+      <input type="file" id="refineFileInput" style="display:none" onchange="handleRefineFile(this.files[0])">
+    </div>
+    <div id="fileHistoryBar" style="display:none;margin-top:.6rem;padding:.5rem .8rem;border-radius:4px;background:oklch(90% 0.02 155 / 0.15);border:1px solid oklch(38% 0.12 155 / 0.2)">
+      <div style="font-family:var(--fm);font-size:.65rem;color:var(--green);font-weight:600" id="fileHistoryLabel"></div>
+      <div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap" id="fileHistoryDots"></div>
+    </div>
     <div style="display:flex;gap:.8rem;margin-top:.8rem;align-items:center">
       <button id="refineBtn" onclick="refine()" style="padding:.6rem 1.5rem;border-radius:6px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-family:var(--fm);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em" onmouseenter="this.style.background='var(--gold)';this.style.color='var(--surface)'" onmouseleave="this.style.background='transparent';this.style.color='var(--gold)'">Refine Again</button>
       <span id="refineCount" style="font-family:var(--fm);font-size:.6rem;color:var(--cream-muted)"></span>
@@ -718,12 +734,20 @@ async function go() {
     originalQuestion=question;
     refinementCount=0;
     lastResultText='';
+    fileHistory = []; // Reset file history for new deliberation
     resetDebateUI();
 
-    // Upload files if any
+    // Upload files if any — also capture content for version history
     let uploadId = null;
     if (pendingFiles.length > 0) {
       addActivity('\u{1F4C4}', `Uploading ${pendingFiles.length} file${pendingFiles.length>1?'s':''}...`, 'convergence');
+      // Capture file contents for version history (round 0 = original)
+      for (const f of pendingFiles) {
+        try {
+          const text = await f.text();
+          fileHistory.push({round: 0, name: f.name, content: text});
+        } catch(e) { /* binary files won't capture, that's ok */ }
+      }
       uploadId = await uploadPendingFiles();
       if (uploadId) {
         addActivity('\u2705', `Files uploaded — council will review them`, 'convergence');
@@ -735,32 +759,120 @@ async function go() {
 
     const wf=document.getElementById('workflowSelect').value;
     const priv=document.getElementById('privateMode').checked;
-    sendDeliberation({question,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId});
+    const rewrite=document.getElementById('rewriteMode').checked;
+    sendDeliberation({question,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId,produce_rewrite:rewrite});
   } catch(e) {
     console.error('go() error:', e);
     addActivity('\u274C', 'Error: ' + e.message, 'error');
   }
 }
 
+let refineFileContent = null;
+let refineFileName = null;
+let fileHistory = []; // [{round, name, content, summary}] — progressive version tracking
+
+function handleRefineDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor='var(--border)';
+  e.currentTarget.style.background='var(--surface2)';
+  if (e.dataTransfer.files.length > 0) handleRefineFile(e.dataTransfer.files[0]);
+}
+
+function handleRefineFile(file) {
+  if (!file) return;
+  refineFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    refineFileContent = e.target.result;
+    const label = document.getElementById('refineUploadLabel');
+    const truncated = refineFileContent.length > 200 ? refineFileContent.substring(0, 200) + '...' : refineFileContent;
+    label.innerHTML = `<span style="color:var(--gold);font-weight:600">${refineFileName}</span> <span style="color:var(--cream-dim)">(${(file.size/1024).toFixed(1)}KB)</span><br><span style="color:var(--cream-dim);font-size:.65rem;white-space:pre-wrap">${truncated.replace(/</g,'&lt;')}</span>`;
+  };
+  reader.readAsText(file);
+}
+
+function updateFileHistoryBar() {
+  const bar = document.getElementById('fileHistoryBar');
+  if (fileHistory.length === 0) { bar.style.display='none'; return; }
+  bar.style.display='block';
+  document.getElementById('fileHistoryLabel').textContent =
+    `${fileHistory.length} version${fileHistory.length>1?'s':''} tracked — council sees full evolution`;
+  const dots = document.getElementById('fileHistoryDots');
+  dots.innerHTML = fileHistory.map(v => {
+    const label = v.round === 0 ? 'Original' : `v${v.round}`;
+    return `<span style="padding:.15rem .5rem;border-radius:3px;background:var(--green);color:var(--surface);font-family:var(--fm);font-size:.55rem;font-weight:600">${label}: ${v.name}</span>`;
+  }).join('');
+}
+
+function buildFileHistoryContext() {
+  if (fileHistory.length === 0) return '';
+  const MAX_TOTAL = 12000; // max chars for all file versions combined
+  let versions = [...fileHistory];
+
+  // Smart truncation: if too large, keep first + last 2
+  let totalLen = versions.reduce((s, v) => s + v.content.length, 0);
+  if (totalLen > MAX_TOTAL && versions.length > 3) {
+    const first = versions[0];
+    const lastTwo = versions.slice(-2);
+    versions = [first, ...lastTwo];
+  }
+
+  // Per-version truncation if still too large
+  const perVersionMax = Math.floor(MAX_TOTAL / versions.length);
+
+  let ctx = '\n\n## Document Version History\n\n';
+  ctx += `*${fileHistory.length} version${fileHistory.length > 1 ? 's' : ''} tracked. Compare the evolution and assess progress toward 10/10.*\n\n`;
+  for (const v of versions) {
+    const label = v.round === 0 ? 'ORIGINAL' : `REVISION ${v.round}`;
+    const content = v.content.length > perVersionMax ? v.content.substring(0, perVersionMax) + '\n[...truncated]' : v.content;
+    ctx += `### ${label}: \`${v.name}\`\n\`\`\`\n${content}\n\`\`\`\n\n`;
+  }
+  if (versions.length < fileHistory.length) {
+    const skipped = fileHistory.length - versions.length;
+    ctx += `*${skipped} intermediate version${skipped > 1 ? 's' : ''} omitted for context efficiency.*\n\n`;
+  }
+  return ctx;
+}
+
 function refine(){
   const feedback=document.getElementById('refineFeedback').value;
-  if(!feedback.trim())return;
+  if(!feedback.trim() && !refineFileContent)return;
   refinementCount++;
   resetDebateUI();
   addActivity('\ud83d\udd04',`Refinement round ${refinementCount} — user feedback provided`,'convergence');
 
+  // Push new file to version history if provided
+  if (refineFileContent) {
+    fileHistory.push({round: refinementCount, name: refineFileName, content: refineFileContent});
+    updateFileHistoryBar();
+  }
+
+  // Build question with progressive file history
+  let question = originalQuestion;
+  const historyCtx = buildFileHistoryContext();
+  if (historyCtx) {
+    question = originalQuestion + historyCtx;
+  }
+
   sendDeliberation({
-    question:originalQuestion,
+    question: question,
     panel:document.getElementById('panel').value,
     rounds:3,
     working_directory:'.',
     custom_models:selModels.length>=2?selModels:null,
     previous_result:lastResultText.substring(0,4000),
-    user_feedback:feedback,
+    user_feedback: feedback || 'Review the updated file I attached and compare it against the previous versions. What improved? What still needs work? Rate progress toward 10/10.',
     refinement_round:refinementCount,
     workflow:document.getElementById('workflowSelect').value,
-    private_mode:document.getElementById('privateMode').checked
+    private_mode:document.getElementById('privateMode').checked,
+    produce_rewrite:document.getElementById('rewriteMode').checked
   });
+
+  // Reset file input (but NOT fileHistory — that persists)
+  refineFileContent = null;
+  refineFileName = null;
+  document.getElementById('refineUploadLabel').innerHTML = 'Drop an updated file here or click to upload';
+  document.getElementById('refineFileInput').value = '';
 }
 
 let startTime=0;let timerInterval=null;let totalParticipants=0;let responsesReceived=0;let currentRound=0;let totalRounds=2;
@@ -1016,7 +1128,8 @@ function ev(t,d){
       <button onclick="exportFile(buildJSON(),'deliberation.json','application/json')" style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s" onmouseover="this.style.background='var(--green)'" onmouseout="this.style.background='var(--green-dim)'">.json</button>
       <button onclick="navigator.clipboard.writeText(buildMarkdown()).then(()=>this.textContent='Copied!')" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:var(--cream-muted);transition:all .15s">Copy All</button>
       <button onclick="shareE2E()" style="background:oklch(45% 0.12 270);border:1px solid oklch(55% 0.15 270);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='oklch(50% 0.14 270)'" onmouseout="this.style.background='oklch(45% 0.12 270)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Share E2E</button>
-      <button id="voiceBtn" onclick="speakSummary()" style="background:oklch(45% 0.10 45);border:1px solid oklch(55% 0.12 45);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='oklch(50% 0.12 45)'" onmouseout="this.style.background='oklch(45% 0.10 45)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>Voice</button>`;
+      <button id="voiceBtn" onclick="speakSummary()" style="background:oklch(45% 0.10 45);border:1px solid oklch(55% 0.12 45);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background='oklch(50% 0.12 45)'" onmouseout="this.style.background='oklch(45% 0.10 45)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>Voice</button>
+      ${document.getElementById('rewriteMode').checked ? '<button onclick="downloadRewrite()" style="background:oklch(40% 0.12 155);border:1px solid oklch(50% 0.14 155);border-radius:4px;padding:.4rem .8rem;cursor:pointer;font-family:var(--fm);font-size:.75rem;color:oklch(92% .01 85);transition:all .15s;display:flex;align-items:center;gap:.3rem" onmouseover="this.style.background=\\'oklch(45% 0.14 155)\\'" onmouseout="this.style.background=\\'oklch(40% 0.12 155)\\'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Rewrite</button>' : ''}`;
     document.getElementById('responses').appendChild(expBar);
 
     // Show refine area
@@ -1131,6 +1244,38 @@ function exportFile(content,filename,type){
 // 1. Encrypt in browser using AES-256-GCM (Web Crypto API)
 // 2. Upload encrypted blob to PrivateBin (server never sees plaintext)
 // 3. Decryption key lives in URL hash (never sent to server)
+function downloadRewrite(){
+  // Extract rewritten document from model responses
+  // Look for "## Rewritten Document" in responses, take the best/longest one
+  const responses = allResponseTexts || [];
+  let bestRewrite = '';
+  for (const r of responses) {
+    const match = r.match(/## Rewritten Document\s*\n([\s\S]*?)(?=\n## Changes Made|$)/);
+    if (match && match[1].trim().length > bestRewrite.length) {
+      bestRewrite = match[1].trim();
+    }
+  }
+  // If no structured rewrite found, take the longest response as fallback
+  if (!bestRewrite) {
+    bestRewrite = responses.reduce((a, b) => a.length > b.length ? a : b, '');
+  }
+  if (!bestRewrite) { alert('No rewritten content found'); return; }
+
+  // Determine filename
+  const origName = fileHistory.length > 0 ? fileHistory[fileHistory.length - 1].name : 'document';
+  const ext = origName.includes('.') ? origName.substring(origName.lastIndexOf('.')) : '.md';
+  const baseName = origName.includes('.') ? origName.substring(0, origName.lastIndexOf('.')) : origName;
+  const fileName = `${baseName}-rewritten-v${refinementCount || 1}${ext}`;
+
+  const blob = new Blob([bestRewrite], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 async function shareE2E(){
   const btn=event.target.closest('button');
   const origText=btn.innerHTML;
