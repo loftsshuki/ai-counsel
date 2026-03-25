@@ -83,7 +83,7 @@ class WebDeliberateRequest(BaseModel):
     """Simplified request model for the web UI."""
     question: str
     panel: Optional[str] = "quick-check"
-    rounds: int = 2
+    rounds: Optional[int] = None  # None = auto-detect from workflow/panel
     working_directory: str = "."
     custom_models: Optional[list] = None  # For custom council mode
     # Refinement loop fields
@@ -233,16 +233,21 @@ async def deliberate_stream(request: WebDeliberateRequest):
 
     async def event_stream() -> AsyncGenerator[str, None]:
         try:
+            # Resolve rounds: user choice > workflow recommendation > panel default > 2
+            from deliberation.workflows import get_workflow
+            active_wf = get_workflow(request.workflow) if request.workflow else None
+            default_rounds = active_wf.recommended_rounds if active_wf else 2
+
             # Custom models override panel selection
             if request.custom_models and len(request.custom_models) >= 2:
                 participants = [Participant(cli=m["adapter"], model=m["id"]) for m in request.custom_models]
                 mode = "conference" if len(participants) > 2 else "quick"
-                rounds = request.rounds
+                rounds = request.rounds if request.rounds is not None else default_rounds
             elif request.panel and request.panel in panels_config:
                 panel = panels_config[request.panel]
                 participants = [Participant(**p) for p in panel["participants"]]
                 mode = panel.get("mode", "quick")
-                rounds = request.rounds or panel.get("rounds", 2)
+                rounds = request.rounds if request.rounds is not None else panel.get("rounds", default_rounds)
             else:
                 yield _sse("error", {"message": f"Panel '{request.panel}' not found"})
                 return

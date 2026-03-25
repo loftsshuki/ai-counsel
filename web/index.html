@@ -374,8 +374,16 @@
         <div class="search-bottom">
           <div class="search-left">
             <select class="s-select" id="panel"></select>
-            <select class="s-select" id="workflowSelect" onchange="updateGoButton()" style="min-width:120px">
+            <select class="s-select" id="workflowSelect" onchange="updateGoButton();updateRoundsDefault()" style="min-width:120px">
               <option value="deliberate">Deliberate</option>
+            </select>
+            <select class="s-select" id="roundsSelect" style="min-width:70px" title="Number of rounds">
+              <option value="auto">Rounds: Auto</option>
+              <option value="1">1 Round</option>
+              <option value="2">2 Rounds</option>
+              <option value="3">3 Rounds</option>
+              <option value="4">4 Rounds</option>
+              <option value="5">5 Rounds</option>
             </select>
             <button class="s-models-btn" id="modelsBtn" onclick="openPicker()">Models</button>
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:oklch(35% 0.02 155);user-select:none;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:var(--surface2);transition:border-color 200ms;white-space:nowrap" title="Private Mode: Nothing saved to server.">
@@ -704,7 +712,7 @@ function resetDebateUI(){
   document.getElementById('sPrivate').style.display=document.getElementById('privateMode').checked?'inline':'none';
   allResponseTexts=[];
   runningCost=0;
-  document.getElementById('sCost').style.display='none';
+  document.getElementById('sCost').style.display='block';
   document.getElementById('sCost').textContent='$0.000';
   renderPhases('starting');
 }
@@ -760,7 +768,9 @@ async function go() {
     const wf=document.getElementById('workflowSelect').value;
     const priv=document.getElementById('privateMode').checked;
     const rewrite=document.getElementById('rewriteMode').checked;
-    sendDeliberation({question,panel:document.getElementById('panel').value,rounds:3,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId,produce_rewrite:rewrite});
+    const roundsVal=document.getElementById('roundsSelect').value;
+    const rounds=roundsVal==='auto'?null:parseInt(roundsVal);
+    sendDeliberation({question,panel:document.getElementById('panel').value,rounds,working_directory:'.',custom_models:selModels.length>=2?selModels:null,workflow:wf,private_mode:priv,upload_id:uploadId,produce_rewrite:rewrite});
   } catch(e) {
     console.error('go() error:', e);
     addActivity('\u274C', 'Error: ' + e.message, 'error');
@@ -857,7 +867,7 @@ function refine(){
   sendDeliberation({
     question: question,
     panel:document.getElementById('panel').value,
-    rounds:3,
+    rounds:document.getElementById('roundsSelect').value==='auto'?null:parseInt(document.getElementById('roundsSelect').value),
     working_directory:'.',
     custom_models:selModels.length>=2?selModels:null,
     previous_result:lastResultText.substring(0,4000),
@@ -1406,6 +1416,15 @@ function updateGoButton(){
   const sel=document.getElementById('workflowSelect');
   const btn=document.getElementById('goBtn');
   btn.textContent=sel.options[sel.selectedIndex]?.textContent||'Go';
+}
+function updateRoundsDefault(){
+  // When workflow changes, update the "Auto" label to show recommended rounds
+  const wfSel=document.getElementById('workflowSelect');
+  const rSel=document.getElementById('roundsSelect');
+  // Workflow phases count = recommended rounds
+  const phaseCounts={deliberate:3,brainstorm:3,red_team:3,interview:3,tournament:3,ceo_boardroom:3};
+  const rec=phaseCounts[wfSel.value]||3;
+  rSel.options[0].textContent=`Rounds: Auto (${rec})`;
 }
 
 render();loadPanels();loadModels();loadWorkflows();
