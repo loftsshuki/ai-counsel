@@ -386,6 +386,7 @@
               <option value="5">5 Rounds</option>
             </select>
             <button class="s-models-btn" id="modelsBtn" onclick="openPicker()">Models</button>
+            <button class="s-models-btn" id="historyBtn" onclick="openHistory()" style="background:var(--surface2);border-color:var(--border);color:var(--cream-muted)">History</button>
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:oklch(35% 0.02 155);user-select:none;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:var(--surface2);transition:border-color 200ms;white-space:nowrap" title="Private Mode: Nothing saved to server.">
               <input type="checkbox" id="privateMode" style="accent-color:var(--green);width:12px;height:12px;cursor:pointer;margin:0">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -1154,6 +1155,8 @@ function ev(t,d){
     document.getElementById('refineRound').textContent=refinementCount>0?`Refinement round ${refinementCount}`:'First run — refine to improve';
     document.getElementById('refineCount').textContent=refinementCount>0?`${refinementCount} refinement${refinementCount>1?'s':''} so far`:'';
     document.getElementById('refineFeedback').value='';
+    // Save to history
+    saveToHistory();
     fin();
   }
 
@@ -1427,7 +1430,144 @@ function updateRoundsDefault(){
   rSel.options[0].textContent=`Rounds: Auto (${rec})`;
 }
 
-render();loadPanels();loadModels();loadWorkflows();
+// ===== History =====
+function saveToHistory(){
+  try{
+    const entry={
+      id:Date.now(),
+      date:new Date().toISOString(),
+      question:deliberationData.question.substring(0,200),
+      workflow:deliberationData.workflow||'deliberate',
+      models:deliberationData.models,
+      rounds:deliberationData.rounds,
+      cost:deliberationData.cost,
+      elapsed:deliberationData.elapsed,
+      summary:deliberationData.summary,
+      responses:deliberationData.responses,
+      markdown:buildMarkdown(),
+      html:buildHTML()
+    };
+    const history=JSON.parse(localStorage.getItem('ai_counsel_history')||'[]');
+    history.unshift(entry);
+    // Keep last 50
+    if(history.length>50)history.length=50;
+    localStorage.setItem('ai_counsel_history',JSON.stringify(history));
+    updateHistoryBadge();
+  }catch(e){console.error('Failed to save history',e);}
+}
+function updateHistoryBadge(){
+  const btn=document.getElementById('historyBtn');
+  if(!btn)return;
+  const count=JSON.parse(localStorage.getItem('ai_counsel_history')||'[]').length;
+  btn.textContent=count>0?`History (${count})`:'History';
+}
+function openHistory(){
+  const overlay=document.createElement('div');
+  overlay.id='historyOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:oklch(10% 0.02 155 / 0.6);z-index:9999;display:flex;justify-content:flex-end;backdrop-filter:blur(4px);opacity:0;transition:opacity .25s';
+  const panel=document.createElement('div');
+  panel.style.cssText='width:min(520px,90vw);height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:2rem 1.5rem;transform:translateX(100%);transition:transform .3s ease';
+  const history=JSON.parse(localStorage.getItem('ai_counsel_history')||'[]');
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+    <h2 style="font-family:var(--fd);font-size:1.5rem;color:var(--cream);margin:0">Deliberation History</h2>
+    <div style="display:flex;gap:.5rem">
+      <button onclick="clearHistory()" style="padding:.4rem .8rem;border-radius:4px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:var(--fm);font-size:.7rem;cursor:pointer">Clear All</button>
+      <button onclick="closeHistory()" style="padding:.4rem .8rem;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--cream-muted);font-family:var(--fm);font-size:.7rem;cursor:pointer">Close</button>
+    </div>
+  </div>`;
+  if(history.length===0){
+    html+=`<p style="font-family:var(--fm);color:var(--cream-muted);text-align:center;padding:3rem 0">No deliberations yet. Run one and it will appear here.</p>`;
+  }else{
+    history.forEach((h,i)=>{
+      const date=new Date(h.date);
+      const timeStr=date.toLocaleDateString()+' '+date.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      const costStr=h.cost>0?` · $${h.cost.toFixed(3)}`:'';
+      const q=h.question.length>120?h.question.substring(0,120)+'...':h.question;
+      html+=`<div style="padding:1rem;margin-bottom:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'" onclick="loadHistoryItem(${i})">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+          <span style="font-family:var(--fm);font-size:.7rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">${h.workflow}</span>
+          <span style="font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">${timeStr}</span>
+        </div>
+        <p style="font-family:var(--fm);font-size:.8rem;color:var(--cream);margin:.3rem 0;line-height:1.4">${q}</p>
+        <div style="display:flex;gap:.8rem;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">
+          <span>${h.rounds} rounds</span>
+          <span>${h.models?.length||0} models</span>
+          <span>${h.elapsed||0}s</span>
+          ${costStr?`<span style="color:var(--gold)">${costStr.replace(' · ','')}</span>`:''}
+        </div>
+      </div>`;
+    });
+  }
+  panel.innerHTML=html;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{overlay.style.opacity='1';panel.style.transform='translateX(0)';});
+  overlay.addEventListener('click',(e)=>{if(e.target===overlay)closeHistory();});
+}
+function closeHistory(){
+  const o=document.getElementById('historyOverlay');
+  if(o){o.style.opacity='0';setTimeout(()=>o.remove(),300);}
+}
+function clearHistory(){
+  if(confirm('Delete all history?')){
+    localStorage.removeItem('ai_counsel_history');
+    closeHistory();
+    updateHistoryBadge();
+  }
+}
+function loadHistoryItem(idx){
+  const history=JSON.parse(localStorage.getItem('ai_counsel_history')||'[]');
+  const h=history[idx];
+  if(!h)return;
+  closeHistory();
+  // Show the saved result in a modal
+  const overlay=document.createElement('div');
+  overlay.id='historyOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:oklch(10% 0.02 155 / 0.6);z-index:9999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(4px);opacity:0;transition:opacity .25s';
+  const modal=document.createElement('div');
+  modal.style.cssText='width:min(800px,92vw);max-height:85vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow-y:auto;padding:2rem;transform:scale(0.95);transition:transform .3s ease';
+  const date=new Date(h.date);
+  const costStr=h.cost>0?`$${h.cost.toFixed(3)}`:'Free';
+  let content=`<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:1.5rem">
+    <div>
+      <span style="font-family:var(--fm);font-size:.7rem;padding:.2rem .6rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">${h.workflow}</span>
+      <span style="font-family:var(--fm);font-size:.65rem;color:var(--cream-muted);margin-left:.5rem">${date.toLocaleString()}</span>
+    </div>
+    <div style="display:flex;gap:.5rem">
+      <button onclick="exportFile(JSON.parse(localStorage.getItem('ai_counsel_history'))[${idx}].markdown,'deliberation.md','text/markdown')" style="padding:.3rem .6rem;border-radius:4px;border:1px solid var(--green);background:var(--green-dim);color:oklch(92% .01 85);font-family:var(--fm);font-size:.65rem;cursor:pointer">.md</button>
+      <button onclick="exportFile(JSON.parse(localStorage.getItem('ai_counsel_history'))[${idx}].html,'deliberation.html','text/html')" style="padding:.3rem .6rem;border-radius:4px;border:1px solid var(--green);background:var(--green-dim);color:oklch(92% .01 85);font-family:var(--fm);font-size:.65rem;cursor:pointer">.html</button>
+      <button onclick="closeHistory()" style="padding:.3rem .6rem;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--cream-muted);font-family:var(--fm);font-size:.65rem;cursor:pointer">Close</button>
+    </div>
+  </div>
+  <div style="font-family:var(--fm);font-size:.85rem;color:var(--cream);line-height:1.5;margin-bottom:1rem;padding:1rem;background:var(--surface2);border-radius:8px">${h.question}</div>
+  <div style="display:flex;gap:1rem;margin-bottom:1.5rem;font-family:var(--fm);font-size:.7rem;color:var(--cream-muted)">
+    <span>${h.rounds} rounds</span>
+    <span>${h.models?.join(', ')}</span>
+    <span>${h.elapsed}s</span>
+    <span style="color:var(--gold)">${costStr}</span>
+  </div>`;
+  // Show responses by round
+  let curRound=0;
+  (h.responses||[]).forEach(r=>{
+    if(r.round!==curRound){curRound=r.round;content+=`<h3 style="font-family:var(--fd);font-size:1.1rem;color:var(--cream);margin:1.2rem 0 .6rem;border-bottom:1px solid var(--border);padding-bottom:.4rem">Round ${curRound}</h3>`;}
+    content+=`<div style="margin-bottom:1rem;padding:.8rem;background:var(--surface2);border-radius:6px;border-left:3px solid var(--green)">
+      <div style="font-family:var(--fm);font-size:.7rem;color:var(--green);margin-bottom:.4rem;font-weight:600">${r.model}</div>
+      <div style="font-family:var(--fm);font-size:.78rem;color:var(--cream);line-height:1.5;white-space:pre-wrap">${(r.text||'').substring(0,3000)}</div>
+    </div>`;
+  });
+  // Summary
+  if(h.summary){
+    content+=`<h3 style="font-family:var(--fd);font-size:1.1rem;color:var(--cream);margin:1.2rem 0 .6rem;border-bottom:1px solid var(--border);padding-bottom:.4rem">Summary</h3>`;
+    content+=`<div style="font-family:var(--fm);font-size:.8rem;color:var(--cream);line-height:1.5;padding:1rem;background:var(--surface2);border-radius:6px">${h.summary.consensus||h.summary.recommendation||'No summary'}</div>`;
+  }
+  modal.innerHTML=content;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{overlay.style.opacity='1';modal.style.transform='scale(1)';});
+  overlay.addEventListener('click',(e)=>{if(e.target===overlay)closeHistory();});
+}
+
+render();loadPanels();loadModels();loadWorkflows();updateHistoryBadge();
 </script>
 </body>
 </html>
