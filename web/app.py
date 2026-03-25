@@ -264,9 +264,7 @@ You previously answered this question and the user wants improvements.
 {request.user_feedback}
 
 ### Instructions
-Address the user's feedback directly. Keep what worked, fix what didn't. Be specific and actionable. This is refinement round {request.refinement_round} — the goal is 10/10.
-
-{"### IMPORTANT: Produce Rewritten Version" + chr(10) + "Do NOT just list suggestions or critique. You MUST output a complete, polished, rewritten version of the document that incorporates all improvements. Start your response with `## Rewritten Document` followed by the full improved text. After the rewritten document, add a brief `## Changes Made` section listing what you changed and why." if request.produce_rewrite else ""}"""
+Address the user's feedback directly. Keep what worked, fix what didn't. Be specific and actionable. This is refinement round {request.refinement_round} — the goal is 10/10."""
 
             # Inject uploaded documents as context
             if request.upload_id and request.upload_id in _uploaded_docs:
@@ -278,9 +276,11 @@ Address the user's feedback directly. Keep what worked, fix what didn't. Be spec
                 # Clean up after use
                 del _uploaded_docs[request.upload_id]
 
-            # Add rewrite instruction for first run if toggled
-            if request.produce_rewrite and not request.previous_result:
-                question += "\n\n### IMPORTANT: Produce Rewritten Version\nDo NOT just list suggestions or critique. You MUST output a complete, polished, rewritten version of the document that incorporates all improvements. Start your response with `## Rewritten Document` followed by the full improved text. After the rewritten document, add a brief `## Changes Made` section listing what you changed and why."
+            # Rewrite instruction — stored separately, injected only in final round
+            # by the engine via delib_request.rewrite_instruction
+            rewrite_instruction = None
+            if request.produce_rewrite:
+                rewrite_instruction = "\n\n### IMPORTANT: Produce Rewritten Version\nDo NOT just list suggestions or critique. You MUST output a complete, polished, rewritten version of the document that incorporates all improvements. Start your response with `## Rewritten Document` followed by the full improved text. After the rewritten document, add a brief `## Changes Made` section listing what you changed and why."
 
             # Build request
             delib_request = DeliberateRequest(
@@ -290,6 +290,7 @@ Address the user's feedback directly. Keep what worked, fix what didn't. Be spec
                 mode=mode,
                 working_directory=request.working_directory,
                 workflow=request.workflow,
+                rewrite_instruction=rewrite_instruction,
             )
 
             # Use asyncio.Queue for true streaming — engine pushes events,

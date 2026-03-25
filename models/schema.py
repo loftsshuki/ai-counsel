@@ -103,6 +103,10 @@ class DeliberateRequest(BaseModel):
         default=None,
         description="Workflow mode: deliberate, brainstorm, red_team, interview, tournament. Changes prompt strategy per round.",
     )
+    rewrite_instruction: Optional[str] = Field(
+        default=None,
+        description="If set, appended to the prompt ONLY in the final round to request a rewritten document.",
+    )
 
 
 class RoundResponse(BaseModel):

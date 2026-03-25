@@ -1326,6 +1326,10 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
             if active_workflow:
                 round_prompt = active_workflow.get_enhanced_prompt(round_num, request.question)
 
+            # Inject rewrite instruction ONLY in the final round
+            if request.rewrite_instruction and round_num == request.rounds:
+                round_prompt += request.rewrite_instruction
+
             try:
                 # Execute round with timeout protection (5 min per round max)
                 round_timeout = self.config.defaults.timeout_per_round if self.config and hasattr(self.config, 'defaults') and hasattr(self.config.defaults, 'timeout_per_round') else 300
