@@ -1056,6 +1056,7 @@ function ev(t,d){
     const cardExport=`<div style="position:absolute;top:.5rem;right:.5rem;display:flex;gap:.3rem">
       <button class="exp-btn" onclick="navigator.clipboard.writeText(document.getElementById('${rId}').textContent).then(()=>this.textContent='Copied!',setTimeout(()=>this.textContent='Copy',1500))" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">Copy</button>
       <button class="exp-btn" onclick="exportFile('# ${esc(modelName)} — Round ${d.round}\\n\\n'+document.getElementById('${rId}').textContent,'${modelName.replace(/[^a-z0-9]/gi,'_')}_r${d.round}.md','text/markdown')" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">.md</button>
+      <button class="exp-btn" onclick="exportCardHTML('${rId}','${esc(modelName)}',${d.round})" style="opacity:0;transition:opacity .15s;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .6rem;cursor:pointer;font-family:var(--fm);font-size:.65rem;color:var(--cream-muted)">.html</button>
     </div>`;
     const roleBadge=d.role==='ceo'?'<span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:oklch(45% 0.12 75);color:oklch(92% .01 85);margin-left:.3rem">CEO</span>':d.role==='board'?'<span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:oklch(35% 0.08 155);color:oklch(92% .01 85);margin-left:.3rem">Board</span>':'';
     e.innerHTML=`${cardExport}<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem"><div style="display:flex;align-items:center"><span style="font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--cream)">${esc(modelName)}</span>${roleBadge}</div><div style="display:flex;gap:.4rem"><span style="font-family:var(--fm);font-size:.55rem;padding:.15rem .5rem;border-radius:3px;background:var(--green-dim);color:oklch(92% .01 85)">Round ${d.round}</span></div></div><div id="${rId}" style="font-family:var(--fm);font-size:.8rem;line-height:1.8;color:var(--cream-dim);white-space:pre-wrap;max-height:400px;overflow-y:auto">${renderResponse(d.response)}</div>`;
@@ -1256,6 +1257,22 @@ function buildJSON(){return JSON.stringify(deliberationData,null,2)}
 function exportFile(content,filename,type){
   const blob=new Blob([content],{type});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+function exportCardHTML(rId,modelName,round){
+  const text=document.getElementById(rId)?.textContent||'';
+  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${modelName} — Round ${round}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>*{margin:0;box-sizing:border-box}body{background:#FAF8F5;color:#1a2e1a;font-family:Outfit,sans-serif;padding:0}
+.hero{background:linear-gradient(135deg,#1a2e1a 0%,#2d4a2d 100%);padding:3rem 2.5rem;position:relative;overflow:hidden}
+.hero svg{position:absolute;inset:0;width:100%;height:100%;opacity:.06}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:600;color:#FAF8F5;position:relative}
+.hero .meta{font-size:.8rem;color:#FAF8F5cc;margin-top:.5rem;position:relative}
+.content{max-width:800px;margin:2rem auto;padding:0 2rem;font-size:.9rem;line-height:1.8;white-space:pre-wrap}
+</style></head><body>
+<div class="hero"><svg viewBox="0 0 1000 200"><path d="M0,100 Q250,20 500,100 T1000,100" fill="none" stroke="#FAF8F5" stroke-width="1"/><path d="M0,120 Q250,40 500,120 T1000,120" fill="none" stroke="#FAF8F5" stroke-width="0.5"/></svg>
+<h1>${modelName}</h1><div class="meta">Round ${round} · AI Counsel Deliberation · ${new Date().toLocaleDateString()}</div></div>
+<div class="content">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div></body></html>`;
+  exportFile(html,`${modelName.replace(/[^a-z0-9]/gi,'_')}_r${round}.html`,'text/html');
 }
 // E2E Encrypted Sharing via PrivateBin
 // 1. Encrypt in browser using AES-256-GCM (Web Crypto API)
