@@ -715,7 +715,7 @@ function resetDebateUI(){
   runningCost=0;
   document.getElementById('sCost').style.display='block';
   document.getElementById('sCost').textContent='$0.000';
-  renderPhases('starting');
+  renderPhases(0);
 }
 
 let abortCtrl=null;
@@ -977,13 +977,26 @@ function updateProgress(){
   document.getElementById('sProgress').style.width=pct+'%';
 }
 
+let phaseLabels=[];  // Built dynamically from round events
+function buildPhaseLabels(totalRounds){
+  // Start with 'Starting', then round labels (filled in by round_start events), then 'Summary'
+  phaseLabels=['Starting'];
+  for(let i=1;i<=totalRounds;i++) phaseLabels.push(`Round ${i}`);
+  phaseLabels.push('Summary');
+}
+function updatePhaseLabel(round, label){
+  // Replace generic "Round N" with workflow phase label
+  if(label && round>=1 && round<phaseLabels.length){
+    phaseLabels[round]=`${label}`;
+  }
+}
 function renderPhases(active){
-  const phases=['Starting','Round 1','Round 2','Convergence','Summary'];
+  if(phaseLabels.length===0) buildPhaseLabels(2);
   const ph=document.getElementById('sPhase');
-  ph.innerHTML=phases.map((p,i)=>{
-    const isActive=p.toLowerCase().includes(active.toLowerCase())||
-      (active==='deliberating'&&p.includes('Round')&&parseInt(p.split(' ')[1])===currentRound);
-    const isDone=i<phases.findIndex(x=>x.toLowerCase().includes(active.toLowerCase()));
+  const activeIdx=typeof active==='number'?active:phaseLabels.findIndex(p=>p.toLowerCase().includes(active.toLowerCase()));
+  ph.innerHTML=phaseLabels.map((p,i)=>{
+    const isActive=i===activeIdx;
+    const isDone=activeIdx>=0&&i<activeIdx;
     const color=isActive?'var(--green)':isDone?'var(--green-dim)':'var(--border)';
     const bg=isActive?'oklch(95% .02 155)':'transparent';
     return `<span style="padding:.15rem .4rem;border-radius:3px;border:1px solid ${color};color:${color};background:${bg}">${p}</span>`;
@@ -998,19 +1011,20 @@ function ev(t,d){
       responsesReceived=0;currentRound=0;
       deliberationModels=d.participants?d.participants.map(p=>p.split('@')[0]):[];
       deliberationData={question:originalQuestion,responses:[],summary:null,workflow:document.getElementById('workflowSelect')?document.getElementById('workflowSelect').value:'deliberate',models:deliberationModels,rounds:totalRounds,cost:0,elapsed:0};
+      buildPhaseLabels(totalRounds);
       startTimer();
       const names=deliberationModels.join(', ');
       document.getElementById('sText').textContent=`Council assembling: ${totalParticipants} models, ${totalRounds} rounds`;
       addActivity('\u2694\ufe0f',`Council convened: ${names}`,'info');
       addActivity('\u2753',`Question: "${d.question}"`,'info');
-      renderPhases('starting');
+      renderPhases(0);
     }
     if(d.phase==='deliberating'){
       document.getElementById('sText').textContent='Models are deliberating...';
     }
     if(d.phase==='summarizing'){
       document.getElementById('sText').textContent='Generating executive summary...';
-      renderPhases('summary');
+      renderPhases(phaseLabels.length-1);  // Last phase = Summary
       addActivity('\ud83d\udcdd','Generating executive summary...','summary');
       document.getElementById('sProgress').style.width='90%';
     }
@@ -1019,9 +1033,11 @@ function ev(t,d){
   if(t==='round_start'){
     currentRound=d.round;
     const phaseStr=d.phase?` — ${d.phase}`:'';
+    // Update phase label with workflow name (e.g., "Frame", "Debate", "Memo")
+    if(d.phase) updatePhaseLabel(d.round, d.phase);
     addActivity('\ud83d\udd04',`Round ${d.round} of ${d.total_rounds}${phaseStr}`,'info');
-    renderPhases('round '+d.round);
-    document.getElementById('sText').textContent=`Round ${d.round}${phaseStr}: waiting for models...`;
+    renderPhases(d.round);  // Index into phaseLabels: 0=Starting, 1=Round1, etc.
+    document.getElementById('sText').textContent=`${d.phase||'Round '+d.round}: waiting for models...`;
   }
 
   if(t==='response'){
@@ -1065,7 +1081,7 @@ function ev(t,d){
   }
 
   if(t==='convergence'){
-    renderPhases('convergence');
+    renderPhases(phaseLabels.length-1);
     const pct=d.similarity?Math.round(d.similarity*100):0;
     document.getElementById('sText').textContent=`Convergence: ${pct}% agreement — ${d.status}`;
     addActivity('\ud83c\udfaf',`Convergence: ${pct}% similarity (${d.status})`,'convergence');
@@ -1073,7 +1089,7 @@ function ev(t,d){
   }
 
   if(t==='summary'){
-    renderPhases('summary');
+    renderPhases(phaseLabels.length-1);
     document.getElementById('sText').textContent='Generating executive summary...';
     addActivity('\ud83d\udcdd','Executive summary generated','summary');
     document.getElementById('sProgress').style.width='95%';
@@ -1124,7 +1140,7 @@ function ev(t,d){
     const costStr=runningCost>0?(runningCost<0.01?` \u00b7 $${runningCost.toFixed(4)}`:` \u00b7 $${runningCost.toFixed(3)}`):'';
     document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s${costStr}`;
     addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)${costStr?` — Est. cost: ${costStr.trim().replace(' \u00b7 ','')}`:''}`,  'info');
-    renderPhases('summary');
+    renderPhases(phaseLabels.length-1);
     // Save data for export
     deliberationData.cost=runningCost;
     deliberationData.elapsed=Math.floor((Date.now()-startTime)/1000);
