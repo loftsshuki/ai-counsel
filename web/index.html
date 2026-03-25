@@ -64,7 +64,7 @@
   .hero {
     min-height:65vh; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center;
-    padding:5rem 2rem 2rem; position:relative; overflow:hidden;
+    padding:5rem 1rem 2rem; position:relative; overflow:hidden;
   }
   .hero-bg {
     position:absolute; inset:0; z-index:0;
@@ -99,13 +99,14 @@
 
   /* SEARCH */
   .search {
-    width:calc(100% - 2rem); max-width:none;
+    width:100%; max-width:none; padding:0 0.5rem; box-sizing:border-box;
     opacity:0; animation:up 700ms 800ms var(--ease) forwards;
   }
   .search-box {
     background:var(--surface); border:1px solid var(--border);
-    border-radius:8px; padding:1.2rem 1.5rem 1rem;
+    border-radius:8px; padding:1.2rem 2rem 1rem;
     transition:border-color 300ms, box-shadow 300ms;
+    width:100%; box-sizing:border-box;
   }
   .search-box:focus-within {
     border-color:var(--green-dim);
