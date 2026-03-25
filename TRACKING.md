@@ -46,6 +46,14 @@
 - **Luxury Brand Summary + HTML Export:**
   - Council Verdict: deep green hero, topo SVG, Cormorant Garamond, cream body
   - HTML export: full standalone branded page with metadata bar
+- **Rewrite Mode:**
+  - Toggle produces complete rewritten documents, not just critique
+  - Download Rewrite button extracts and saves improved version
+  - Progressive file version history across refinement rounds (v1→v2→v3)
+  - Smart truncation: keeps first + last 2 versions if context exceeds 12K
+- **Refinement File Upload:**
+  - Upload updated files in refinement zone (not just initial upload)
+  - Council sees full document evolution with version labels
 - **Stop Button:**
   - AbortController cancels SSE stream mid-deliberation
 - **File Upload Fix (Railway):**
