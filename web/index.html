@@ -1042,22 +1042,24 @@ function ev(t,d){
   if(t==='response'){
     responsesReceived++;
     allResponseTexts.push(`[${d.participant}] ${d.response}`);
-    // Calculate cost for this response
-    if(d.adapter && d.model_id && d.est_input_tokens!=null && d.est_output_tokens!=null){
+    // Calculate cost for this response — always estimate even without exact pricing
+    const inTok=d.est_input_tokens||0;
+    const outTok=d.est_output_tokens||0;
+    if(d.adapter && d.model_id){
       const key=`${d.adapter}/${d.model_id}`;
       const pricing=modelPricing[key];
       if(pricing && (pricing.input_cost>0 || pricing.output_cost>0)){
-        const inputCost=(d.est_input_tokens/1000000)*pricing.input_cost;
-        const outputCost=(d.est_output_tokens/1000000)*pricing.output_cost;
-        runningCost+=inputCost+outputCost;
-      } else {
+        runningCost+=(inTok/1000000)*pricing.input_cost+(outTok/1000000)*pricing.output_cost;
+      } else if(inTok>0||outTok>0){
         // Fallback estimate: ~$3/$15 per 1M tokens (mid-range)
-        runningCost+=(d.est_input_tokens/1000000)*3+(d.est_output_tokens/1000000)*15;
+        runningCost+=(inTok/1000000)*3+(outTok/1000000)*15;
       }
-      const costEl=document.getElementById('sCost');
-      costEl.style.display='block';
-      costEl.textContent=runningCost<0.01?`$${runningCost.toFixed(4)}`:`$${runningCost.toFixed(3)}`;
+    } else if(inTok>0||outTok>0){
+      runningCost+=(inTok/1000000)*3+(outTok/1000000)*15;
     }
+    const costEl=document.getElementById('sCost');
+    costEl.style.display='block';
+    costEl.textContent=runningCost<0.01?`$${runningCost.toFixed(4)}`:`$${runningCost.toFixed(3)}`;
     const modelName=d.participant.split('@')[0]||d.participant;
     deliberationData.responses.push({round:d.round,model:modelName,text:d.response,timestamp:d.timestamp});
     document.getElementById('sText').textContent=`Round ${d.round}: ${modelName} responded`;
@@ -1139,7 +1141,7 @@ function ev(t,d){
     document.getElementById('sSpinner').style.animation='none';
     document.getElementById('sSpinner').style.borderColor='var(--green)';
     const elapsed=Math.floor((Date.now()-startTime)/1000);
-    const costStr=runningCost>0?(runningCost<0.01?` \u00b7 $${runningCost.toFixed(4)}`:` \u00b7 $${runningCost.toFixed(3)}`):'';
+    const costStr=runningCost>=0?` \u00b7 $${runningCost<0.01?runningCost.toFixed(4):runningCost.toFixed(3)}`:'';
     document.getElementById('sText').textContent=`Complete \u00b7 ${d.rounds_completed} rounds \u00b7 ${elapsed}s${costStr}`;
     addActivity('\u2705',`Deliberation complete in ${elapsed}s (${d.rounds_completed} rounds)${costStr?` — Est. cost: ${costStr.trim().replace(' \u00b7 ','')}`:''}`,  'info');
     renderPhases(phaseLabels.length-1);
