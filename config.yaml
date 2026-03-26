@@ -527,11 +527,6 @@ model_registry:
       label: "Perplexity Sonar Pro Search"
       tier: "search"
       enabled: true
-    # ===== ULTRA-FAST CHEAP MODELS =====
-    - id: "google/gemini-2.5-flash-preview-05-20"
-      label: "Gemini 2.5 Flash Preview"
-      tier: "speed"
-      enabled: true
   nebius:
     - id: "moonshotai/Kimi-K2-Thinking"
       label: "Kimi K2 Thinking"
