@@ -234,9 +234,14 @@ async def deliberate_stream(request: WebDeliberateRequest):
     async def event_stream() -> AsyncGenerator[str, None]:
         try:
             # Resolve rounds: user choice > workflow recommendation > panel default > 2
+            # Refinement runs auto-default to 2 rounds (less context bloat)
             from deliberation.workflows import get_workflow
             active_wf = get_workflow(request.workflow) if request.workflow else None
-            default_rounds = active_wf.recommended_rounds if active_wf else 2
+            is_refinement = request.previous_result and request.user_feedback
+            if is_refinement:
+                default_rounds = 2
+            else:
+                default_rounds = active_wf.recommended_rounds if active_wf else 2
 
             # Custom models override panel selection
             if request.custom_models and len(request.custom_models) >= 2:
