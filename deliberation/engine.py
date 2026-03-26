@@ -1322,8 +1322,10 @@ TOOL_REQUEST: {"name": "search_code", "arguments": {"pattern": "class.*Adapter",
 
             # ===== NORMAL MODE: Equal-peer deliberation =====
             # Transform prompt through workflow if active
+            # Skip workflow wrapping for refinement runs — the question already has full context
             round_prompt = request.question
-            if active_workflow:
+            is_refinement = "## Refinement Round" in request.question
+            if active_workflow and not is_refinement:
                 round_prompt = active_workflow.get_enhanced_prompt(round_num, request.question)
 
             # Inject rewrite instruction ONLY in the final round

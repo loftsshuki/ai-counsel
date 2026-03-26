@@ -723,7 +723,7 @@ function sendDeliberation(body){
   document.getElementById('stopBtn').style.display='inline-block';
   fetch('/api/deliberate/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:abortCtrl.signal}).then(r=>{
     const rd=r.body.getReader();const dc=new TextDecoder();let buf='';
-    function read(){rd.read().then(({done,value})=>{if(done){fin();return;}buf+=dc.decode(value,{stream:true});const evts=buf.split('\n\n');buf=evts.pop();for(const bl of evts){const ls=bl.split('\n');let t='',d='';for(const l of ls){if(l.startsWith('event: '))t=l.slice(7);else if(l.startsWith('data: '))d=l.slice(6);}if(t&&d)try{ev(t,JSON.parse(d));}catch(e){}}read();}).catch(()=>fin());}read();
+    function read(){rd.read().then(({done,value})=>{if(done){fin();return;}buf+=dc.decode(value,{stream:true});const evts=buf.split('\n\n');buf=evts.pop();for(const bl of evts){const ls=bl.split('\n');let t='',dParts=[];for(const l of ls){if(l.startsWith('event: '))t=l.slice(7);else if(l.startsWith('data: '))dParts.push(l.slice(6));}const d=dParts.join('');if(t&&d)try{ev(t,JSON.parse(d));}catch(e){console.warn('SSE parse error:',e.message,d.substring(0,100));}}read();}).catch(()=>fin());}read();
   }).catch(()=>fin());
 }
 function stopDeliberation(){
@@ -1043,17 +1043,20 @@ function ev(t,d){
     responsesReceived++;
     allResponseTexts.push(`[${d.participant}] ${d.response}`);
     // Calculate cost for this response
-    if(d.adapter && d.model_id && d.est_input_tokens && d.est_output_tokens){
+    if(d.adapter && d.model_id && d.est_input_tokens!=null && d.est_output_tokens!=null){
       const key=`${d.adapter}/${d.model_id}`;
       const pricing=modelPricing[key];
-      if(pricing){
+      if(pricing && (pricing.input_cost>0 || pricing.output_cost>0)){
         const inputCost=(d.est_input_tokens/1000000)*pricing.input_cost;
         const outputCost=(d.est_output_tokens/1000000)*pricing.output_cost;
         runningCost+=inputCost+outputCost;
-        const costEl=document.getElementById('sCost');
-        costEl.style.display='block';
-        costEl.textContent=runningCost<0.01?`$${runningCost.toFixed(4)}`:`$${runningCost.toFixed(3)}`;
+      } else {
+        // Fallback estimate: ~$3/$15 per 1M tokens (mid-range)
+        runningCost+=(d.est_input_tokens/1000000)*3+(d.est_output_tokens/1000000)*15;
       }
+      const costEl=document.getElementById('sCost');
+      costEl.style.display='block';
+      costEl.textContent=runningCost<0.01?`$${runningCost.toFixed(4)}`:`$${runningCost.toFixed(3)}`;
     }
     const modelName=d.participant.split('@')[0]||d.participant;
     deliberationData.responses.push({round:d.round,model:modelName,text:d.response,timestamp:d.timestamp});
