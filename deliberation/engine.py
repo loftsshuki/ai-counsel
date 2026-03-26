@@ -326,14 +326,25 @@ The following files are available in the working directory:
                 participant_prompt = f"{persona_prefix}\n\n---\n\n{participant_prompt}"
 
             try:
-                response_text = await adapter.invoke(
-                    prompt=participant_prompt,
-                    model=participant.model,
-                    context=context,
-                    is_deliberation=True,
-                    working_directory=working_directory,
-                    reasoning_effort=participant.reasoning_effort,
-                )
+                # Per-model timeout: 120s prevents one slow model from blocking the round
+                model_timeout = 120
+                try:
+                    response_text = await asyncio.wait_for(
+                        adapter.invoke(
+                            prompt=participant_prompt,
+                            model=participant.model,
+                            context=context,
+                            is_deliberation=True,
+                            working_directory=working_directory,
+                            reasoning_effort=participant.reasoning_effort,
+                        ),
+                        timeout=model_timeout
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        f"Round {round_num}: {participant.model}@{participant.cli} timed out after {model_timeout}s"
+                    )
+                    return (participant, f"[TIMEOUT: {participant.model} did not respond within {model_timeout}s. Skipped.]")
                 logger.info(
                     f"Round {round_num}: Received response from {participant.model}@{participant.cli}, "
                     f"response_length={len(response_text)} chars"
